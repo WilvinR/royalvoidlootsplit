@@ -445,6 +445,8 @@ async function applyModAction() {
             return;
         }
         await runAudit(userIds[0]);
+        showTxSuccess();
+        resetTxInputs();
         return;
     }
 
