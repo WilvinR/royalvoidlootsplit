@@ -358,6 +358,41 @@ body {
     font-size: 14px;
 }
 
+.member-list {
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.06);
+    padding: 6px;
+    max-height: 240px;
+    overflow: auto;
+}
+
+.member-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.member-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.member-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #667eea;
+}
+
+.member-item-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+}
+
 .modal-field select option {
     background: #1e1e2e;
     color: rgba(255, 255, 255, 0.95);

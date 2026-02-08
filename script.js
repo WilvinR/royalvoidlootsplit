@@ -9,7 +9,7 @@ const modModal = document.getElementById('modModal');
 const modCloseBtn = document.getElementById('modCloseBtn');
 const modAction = document.getElementById('modAction');
 const memberFilter = document.getElementById('memberFilter');
-const memberSelect = document.getElementById('memberSelect');
+const memberList = document.getElementById('memberList');
 const voiceChannelField = document.getElementById('voiceChannelField');
 const voiceChannelSelect = document.getElementById('voiceChannelSelect');
 const announceChannelField = document.getElementById('announceChannelField');
@@ -265,40 +265,38 @@ function syncMemberUI() {
     const filt = String(memberFilter?.value || 'role');
     const isVoice = filt === 'voice';
     if (voiceChannelField) voiceChannelField.style.display = isVoice ? 'block' : 'none';
-    if (memberSelect) {
-        // Multi-select is enabled for both filters; audit action will enforce selecting only 1 user.
-        memberSelect.multiple = true;
-        memberSelect.size = 6;
+}
+
+function renderMemberCheckboxes(members, { autoSelectAll = false } = {}) {
+    if (!memberList) return;
+    memberList.innerHTML = '';
+
+    for (const m of Array.isArray(members) ? members : []) {
+        const uid = String(m?.id ?? '').trim();
+        const name = String(m?.name ?? uid).trim();
+        if (!/^\d{5,}$/.test(uid)) continue;
+
+        const row = document.createElement('label');
+        row.className = 'member-item';
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'member-item-checkbox';
+        cb.value = uid;
+        cb.checked = !!autoSelectAll;
+
+        const text = document.createElement('span');
+        text.className = 'member-item-label';
+        text.textContent = name;
+
+        row.appendChild(cb);
+        row.appendChild(text);
+        memberList.appendChild(row);
     }
 }
 
-function _enableClickToggleMultiSelect(selectEl) {
-    if (!selectEl || selectEl.__clickToggleBound) return;
-    selectEl.__clickToggleBound = true;
-
-    // Allow multi-select without requiring Ctrl (works for mouse/touch)
-    selectEl.addEventListener('mousedown', (e) => {
-        if (!selectEl.multiple) return;
-        const opt = e.target && e.target.tagName === 'OPTION' ? e.target : null;
-        if (!opt) return;
-        e.preventDefault();
-        opt.selected = !opt.selected;
-        selectEl.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-
-    selectEl.addEventListener('touchstart', (e) => {
-        if (!selectEl.multiple) return;
-        const opt = e.target && e.target.tagName === 'OPTION' ? e.target : null;
-        if (!opt) return;
-        e.preventDefault();
-        opt.selected = !opt.selected;
-        selectEl.dispatchEvent(new Event('change', { bubbles: true }));
-    }, { passive: false });
-}
-
 async function loadMemberOptions() {
-    if (!selectedGuildId || !memberSelect) return;
-    _enableClickToggleMultiSelect(memberSelect);
+    if (!selectedGuildId || !memberList) return;
     const filt = String(memberFilter?.value || 'role');
     const qs = new URLSearchParams({ guild_id: selectedGuildId, filter: filt });
     if (filt === 'voice' && voiceChannelSelect && voiceChannelSelect.value) {
@@ -306,7 +304,7 @@ async function loadMemberOptions() {
     }
     const res = await apiFetch(`/api/members?${qs.toString()}`, { method: 'GET' });
     if (!res.ok) {
-        memberSelect.innerHTML = '';
+        memberList.innerHTML = '';
         return;
     }
     const data = await res.json();
@@ -325,22 +323,13 @@ async function loadMemberOptions() {
     }
 
     lastVoiceMembers = members;
-    memberSelect.innerHTML = members
-        .map(m => `<option value="${escapeHtml(String(m.id || ''))}">${escapeHtml(String(m.name || m.id || ''))}</option>`)
-        .join('');
-
-    if (filt === 'voice') {
-        const count = memberSelect.options ? memberSelect.options.length : 0;
-        memberSelect.size = Math.max(3, Math.min(6, count || 0));
-        for (const opt of Array.from(memberSelect.options)) {
-            opt.selected = true;
-        }
-    }
+    renderMemberCheckboxes(members, { autoSelectAll: filt === 'voice' });
 }
 
 function getSelectedUserIds() {
-    if (!memberSelect) return [];
-    const ids = Array.from(memberSelect.selectedOptions || []).map(o => String(o.value || '').trim());
+    if (!memberList) return [];
+    const cbs = Array.from(memberList.querySelectorAll('input[type="checkbox"]'));
+    const ids = cbs.filter(cb => cb.checked).map(cb => String(cb.value || '').trim());
     return ids.filter(x => /^\d{5,}$/.test(x));
 }
 
