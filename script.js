@@ -257,7 +257,7 @@ function syncActionUI() {
     if (amountField) amountField.style.display = needsAmount ? 'block' : 'none';
     setAuditVisible(action === 'audit');
     if (announceChannelField) {
-        announceChannelField.style.display = action === 'load' ? 'block' : 'none';
+        announceChannelField.style.display = (action === 'load' || action === 'autosplit') ? 'block' : 'none';
     }
 
     const isSplit = action === 'autosplit';
@@ -455,6 +455,12 @@ async function applyModAction() {
         const repair = parseMoneyInt(splitRepair?.value);
         const pct = _parseNumberOrZero(splitPercent?.value);
 
+        const announce_channel_id = String(announceChannelSelect?.value || '').trim();
+        if (!announce_channel_id) {
+            showModHint('Selecciona un canal para enviar el mensaje.');
+            return;
+        }
+
         if (!Number.isFinite(total) || total <= 0) {
             showModHint('Monto total inválido.');
             return;
@@ -509,7 +515,7 @@ async function applyModAction() {
                     user_ids: userIds,
                     amount: Math.abs(perUser),
                     mode: 'add',
-                    announce_channel_id: '',
+                    announce_channel_id,
                 }),
             });
             const data = await res.json().catch(() => ({}));
