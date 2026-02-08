@@ -16,6 +16,12 @@ const announceChannelField = document.getElementById('announceChannelField');
 const announceChannelSelect = document.getElementById('announceChannelSelect');
 const amountField = document.getElementById('amountField');
 const modAmount = document.getElementById('modAmount');
+const splitTotalField = document.getElementById('splitTotalField');
+const splitTotal = document.getElementById('splitTotal');
+const splitRepairField = document.getElementById('splitRepairField');
+const splitRepair = document.getElementById('splitRepair');
+const splitPercentField = document.getElementById('splitPercentField');
+const splitPercent = document.getElementById('splitPercent');
 const modApplyBtn = document.getElementById('modApplyBtn');
 const modHint = document.getElementById('modHint');
 const auditTable = document.getElementById('auditTable');
@@ -248,6 +254,11 @@ function syncActionUI() {
     if (announceChannelField) {
         announceChannelField.style.display = action === 'load' ? 'block' : 'none';
     }
+
+    const isSplit = action === 'autosplit';
+    if (splitTotalField) splitTotalField.style.display = isSplit ? 'block' : 'none';
+    if (splitRepairField) splitRepairField.style.display = isSplit ? 'block' : 'none';
+    if (splitPercentField) splitPercentField.style.display = isSplit ? 'block' : 'none';
 }
 
 function syncMemberUI() {
@@ -255,13 +266,39 @@ function syncMemberUI() {
     const isVoice = filt === 'voice';
     if (voiceChannelField) voiceChannelField.style.display = isVoice ? 'block' : 'none';
     if (memberSelect) {
-        memberSelect.multiple = isVoice;
-        memberSelect.size = isVoice ? 6 : 1;
+        // Multi-select is enabled for both filters; audit action will enforce selecting only 1 user.
+        memberSelect.multiple = true;
+        memberSelect.size = 6;
     }
+}
+
+function _enableClickToggleMultiSelect(selectEl) {
+    if (!selectEl || selectEl.__clickToggleBound) return;
+    selectEl.__clickToggleBound = true;
+
+    // Allow multi-select without requiring Ctrl (works for mouse/touch)
+    selectEl.addEventListener('mousedown', (e) => {
+        if (!selectEl.multiple) return;
+        const opt = e.target && e.target.tagName === 'OPTION' ? e.target : null;
+        if (!opt) return;
+        e.preventDefault();
+        opt.selected = !opt.selected;
+        selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    selectEl.addEventListener('touchstart', (e) => {
+        if (!selectEl.multiple) return;
+        const opt = e.target && e.target.tagName === 'OPTION' ? e.target : null;
+        if (!opt) return;
+        e.preventDefault();
+        opt.selected = !opt.selected;
+        selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+    }, { passive: false });
 }
 
 async function loadMemberOptions() {
     if (!selectedGuildId || !memberSelect) return;
+    _enableClickToggleMultiSelect(memberSelect);
     const filt = String(memberFilter?.value || 'role');
     const qs = new URLSearchParams({ guild_id: selectedGuildId, filter: filt });
     if (filt === 'voice' && voiceChannelSelect && voiceChannelSelect.value) {
@@ -305,6 +342,13 @@ function getSelectedUserIds() {
     if (!memberSelect) return [];
     const ids = Array.from(memberSelect.selectedOptions || []).map(o => String(o.value || '').trim());
     return ids.filter(x => /^\d{5,}$/.test(x));
+}
+
+function _parseNumberOrZero(v) {
+    const s = String(v ?? '').trim();
+    if (!s) return 0;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : 0;
 }
 
 function describeTxType(tx) {
@@ -363,6 +407,66 @@ async function applyModAction() {
             return;
         }
         await runAudit(userIds[0]);
+        return;
+    }
+
+    if (action === 'autosplit') {
+        const total = Math.floor(_parseNumberOrZero(splitTotal?.value));
+        const repair = Math.floor(_parseNumberOrZero(splitRepair?.value));
+        const pct = _parseNumberOrZero(splitPercent?.value);
+
+        if (!Number.isFinite(total) || total <= 0) {
+            showModHint('Monto total inválido.');
+            return;
+        }
+        if (!Number.isFinite(repair) || repair < 0) {
+            showModHint('Costo de reparación inválido.');
+            return;
+        }
+        if (!Number.isFinite(pct) || pct < 0) {
+            showModHint('Porcentaje inválido.');
+            return;
+        }
+        if (userIds.length < 1) {
+            showModHint('Selecciona al menos 1 usuario.');
+            return;
+        }
+
+        const fee = Math.floor(total * (pct / 100));
+        const net = total - repair - fee;
+        if (net <= 0) {
+            showModHint('El total no alcanza para cubrir reparación y porcentaje.');
+            return;
+        }
+        const perUser = Math.floor(net / userIds.length);
+        if (perUser <= 0) {
+            showModHint('El monto por persona quedó en 0.');
+            return;
+        }
+
+        modApplyBtn.disabled = true;
+        try {
+            const res = await apiFetch(`/api/admin/balance`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    guild_id: selectedGuildId,
+                    user_ids: userIds,
+                    amount: Math.abs(perUser),
+                    mode: 'add',
+                    announce_channel_id: '',
+                }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data.success) {
+                showModHint((data && data.error) ? String(data.error) : 'No se pudo aplicar el auto split.');
+                return;
+            }
+            showModHint(`Auto split listo. Total: ${formatAmount(total)} | Reparación: ${formatAmount(repair)} | %: ${pct}% (${formatAmount(fee)}) | Neto: ${formatAmount(net)} | Por persona: ${formatAmount(perUser)} | Usuarios: ${userIds.length}`);
+            await refreshData(selectedGuildId);
+        } finally {
+            modApplyBtn.disabled = false;
+        }
         return;
     }
 
