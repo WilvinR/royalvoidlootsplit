@@ -393,6 +393,24 @@ body {
     color: rgba(255, 255, 255, 0.95);
 }
 
+.tx-success {
+    position: sticky;
+    top: 0;
+    margin: 0 auto 12px auto;
+    width: 84px;
+    height: 84px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    background: rgba(38, 222, 129, 0.12);
+    border: 2px solid rgba(38, 222, 129, 0.55);
+    color: #26de81;
+    font-size: 52px;
+    font-weight: 900;
+    box-shadow: 0 18px 50px rgba(38, 222, 129, 0.18);
+    transform: scale(0.98);
+}
+
 .modal-field select option {
     background: #1e1e2e;
     color: rgba(255, 255, 255, 0.95);

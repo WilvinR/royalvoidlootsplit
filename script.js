@@ -22,6 +22,7 @@ const splitRepairField = document.getElementById('splitRepairField');
 const splitRepair = document.getElementById('splitRepair');
 const splitPercentField = document.getElementById('splitPercentField');
 const splitPercent = document.getElementById('splitPercent');
+const txSuccess = document.getElementById('txSuccess');
 const modApplyBtn = document.getElementById('modApplyBtn');
 const modHint = document.getElementById('modHint');
 const auditTable = document.getElementById('auditTable');
@@ -370,6 +371,24 @@ function bindMoneyAutoFormat(el) {
     el.addEventListener('blur', () => formatMoneyInput(el));
 }
 
+function showTxSuccess() {
+    if (!txSuccess) return;
+    txSuccess.style.display = 'grid';
+    setTimeout(() => {
+        txSuccess.style.display = 'none';
+    }, 1400);
+}
+
+function resetTxInputs() {
+    formatMoneyInput(modAmount);
+    formatMoneyInput(splitTotal);
+    formatMoneyInput(splitRepair);
+    if (modAmount) modAmount.value = '';
+    if (splitTotal) splitTotal.value = '';
+    if (splitRepair) splitRepair.value = '';
+    if (splitPercent) splitPercent.value = '';
+}
+
 function describeTxType(tx) {
     const t = String(tx || '').toLowerCase();
     if (t === 'payment') return 'Pago';
@@ -498,6 +517,8 @@ async function applyModAction() {
             }
             showModHint(`Auto split listo. Total: ${formatAmount(total)} | Reparación: ${formatAmount(repair)} | %: ${pct}% (${formatAmount(fee)}) | Neto: ${formatAmount(net)} | Por persona: ${formatAmount(perUser)} | Usuarios: ${userIds.length}`);
             await refreshData(selectedGuildId);
+            showTxSuccess();
+            resetTxInputs();
         } finally {
             modApplyBtn.disabled = false;
         }
@@ -523,6 +544,10 @@ async function applyModAction() {
     modApplyBtn.disabled = true;
     try {
         const announce_channel_id = action === 'load' ? String(announceChannelSelect?.value || '').trim() : '';
+        if (action === 'load' && !announce_channel_id) {
+            showModHint('Selecciona un canal para enviar el mensaje.');
+            return;
+        }
         const res = await apiFetch(`/api/admin/balance`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -539,6 +564,8 @@ async function applyModAction() {
             showModHint(`Listo. Nuevo balance: ${formatAmount(data.new_balance)}`);
         }
         await refreshData(selectedGuildId);
+        showTxSuccess();
+        resetTxInputs();
     } finally {
         modApplyBtn.disabled = false;
     }
