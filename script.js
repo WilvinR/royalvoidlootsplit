@@ -66,6 +66,10 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 async function init() {
+    bindMoneyAutoFormat(modAmount);
+    bindMoneyAutoFormat(splitTotal);
+    bindMoneyAutoFormat(splitRepair);
+
     // Capture sid after OAuth callback (fallback auth when cookies are blocked)
     const urlParams = new URLSearchParams(window.location.search);
     const sid = urlParams.get('sid');
@@ -340,6 +344,32 @@ function _parseNumberOrZero(v) {
     return Number.isFinite(n) ? n : 0;
 }
 
+function parseMoneyInt(value) {
+    // Accept formats like: 100000, 100,000, 100 000
+    const s = String(value ?? '').trim();
+    if (!s) return 0;
+    const cleaned = s.replace(/[^0-9\-]/g, '');
+    if (!cleaned || cleaned === '-' ) return 0;
+    const n = parseInt(cleaned, 10);
+    return Number.isFinite(n) ? n : 0;
+}
+
+function formatMoneyInput(el) {
+    if (!el) return;
+    const n = parseMoneyInt(el.value);
+    if (!n) {
+        el.value = '';
+        return;
+    }
+    el.value = formatAmount(n);
+}
+
+function bindMoneyAutoFormat(el) {
+    if (!el || el.__moneyBound) return;
+    el.__moneyBound = true;
+    el.addEventListener('blur', () => formatMoneyInput(el));
+}
+
 function describeTxType(tx) {
     const t = String(tx || '').toLowerCase();
     if (t === 'payment') return 'Pago';
@@ -400,8 +430,8 @@ async function applyModAction() {
     }
 
     if (action === 'autosplit') {
-        const total = Math.floor(_parseNumberOrZero(splitTotal?.value));
-        const repair = Math.floor(_parseNumberOrZero(splitRepair?.value));
+        const total = parseMoneyInt(splitTotal?.value);
+        const repair = parseMoneyInt(splitRepair?.value);
         const pct = _parseNumberOrZero(splitPercent?.value);
 
         if (!Number.isFinite(total) || total <= 0) {
@@ -433,6 +463,21 @@ async function applyModAction() {
             return;
         }
 
+        const ok = window.confirm(
+            `Confirmar Auto split\n\n` +
+            `Usuarios: ${userIds.length}\n` +
+            `Total: ${formatAmount(total)}\n` +
+            `Reparación: ${formatAmount(repair)}\n` +
+            `Porcentaje: ${pct}% (${formatAmount(fee)})\n` +
+            `Neto a repartir: ${formatAmount(net)}\n` +
+            `A cada uno: ${formatAmount(perUser)}\n\n` +
+            `¿Deseas aplicar la carga?`
+        );
+        if (!ok) {
+            showModHint('Auto split cancelado.');
+            return;
+        }
+
         modApplyBtn.disabled = true;
         try {
             const res = await apiFetch(`/api/admin/balance`, {
@@ -459,16 +504,13 @@ async function applyModAction() {
         return;
     }
 
-    const amountStr = String(modAmount?.value || '').trim();
-    if (!amountStr || isNaN(Number(amountStr))) {
+    const amountRaw = String(modAmount?.value || '').trim();
+    const parsedAmount = parseMoneyInt(amountRaw);
+    if (!amountRaw || !Number.isFinite(parsedAmount) || parsedAmount === 0) {
         showModHint('Monto inválido.');
         return;
     }
-    let amount = parseInt(amountStr, 10);
-    if (!Number.isFinite(amount)) {
-        showModHint('Monto inválido.');
-        return;
-    }
+    let amount = parsedAmount;
     let mode = 'add';
     if (action === 'set') {
         mode = 'set';

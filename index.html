@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RoyalVoid Loot split</title>
-    <link rel="stylesheet" href="styles.css?v=7">
+    <link rel="stylesheet" href="styles.css?v=8">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -95,15 +95,15 @@
                     </div>
                     <div class="modal-field" id="amountField" style="grid-column: 1 / -1;">
                         <label for="modAmount">Monto</label>
-                        <input id="modAmount" type="number" step="1" autocomplete="off" placeholder="0">
+                        <input id="modAmount" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
                     </div>
                     <div class="modal-field" id="splitTotalField" style="grid-column: 1 / -1; display:none;">
                         <label for="splitTotal">Monto total a repartir</label>
-                        <input id="splitTotal" type="number" step="1" autocomplete="off" placeholder="0">
+                        <input id="splitTotal" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
                     </div>
                     <div class="modal-field" id="splitRepairField" style="grid-column: 1 / -1; display:none;">
                         <label for="splitRepair">Costo de reparación</label>
-                        <input id="splitRepair" type="number" step="1" autocomplete="off" placeholder="0">
+                        <input id="splitRepair" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
                     </div>
                     <div class="modal-field" id="splitPercentField" style="grid-column: 1 / -1; display:none;">
                         <label for="splitPercent">Porcentaje (%)</label>
@@ -129,6 +129,6 @@
         </div>
     </div>
 
-    <script src="script.js?v=7"></script>
+    <script src="script.js?v=8"></script>
 </body>
 </html>
