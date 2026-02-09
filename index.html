@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoyalVoid Loot split</title>
+    <link rel="stylesheet" href="styles.css?v=6">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header with Logo -->
+        <header class="header">
+            <div class="logo-container">
+                <div class="logo">
+                    <i class="fas fa-crown"></i>
+                    <i class="fas fa-swords"></i>
+                    <span class="logo-text">RoyalVoid Loot split</span>
+                </div>
+                <div class="user-pill" id="userPill" style="display:none;"></div>
+            </div>
+            <div class="header-actions">
+                <a class="login-btn" id="loginBtn" href="https://royalvoidlootsplit.discloud.app/login">Iniciar sesión</a>
+                <a class="login-btn" id="logoutBtn" href="https://royalvoidlootsplit.discloud.app/logout" style="display:none;">Salir</a>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="table-container">
+                <div class="balance-controls">
+                    <div class="controls-left">
+                        <div class="server-pill" id="serverPill" style="display:none;"></div>
+                        <button class="server-action-btn" id="modOpenBtn" type="button" style="display:none;">+</button>
+                    </div>
+                    <div class="controls-right">
+                        <div class="balance-summary">
+                            <div class="balance-label">Balance</div>
+                            <div class="balance-value" id="balanceValue">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <table class="activities-table" id="historyTable">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th style="text-align:right;">Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                    </tbody>
+                </table>
+
+                <section class="owner-dashboard" id="ownerDashboard" style="display:none;">
+                    <div class="owner-header">
+                        <div class="owner-title">Gremio (Owner)</div>
+                        <div class="owner-status">
+                            <span class="status-indicator" id="guildDebtIndicator"></span>
+                            <span class="owner-status-text" id="guildDebtStatusText">-</span>
+                        </div>
+                    </div>
+
+                    <div class="owner-grid">
+                        <div class="owner-card">
+                            <div class="owner-card-title">Balance del Gremio</div>
+                            <div class="owner-balance-row">
+                                <div class="owner-balance-value" id="guildBalanceValue">-</div>
+                            </div>
+                            <div class="owner-actions">
+                                <input id="guildBalanceInput" type="number" step="1" autocomplete="off" placeholder="0">
+                                <button class="login-btn" id="guildBalanceSetBtn" type="button">Establecer</button>
+                                <button class="login-btn" id="guildBalanceAddBtn" type="button">Depositar (+)</button>
+                            </div>
+                        </div>
+
+                        <div class="owner-card">
+                            <div class="owner-card-title">Deuda total con miembros</div>
+                            <div class="owner-balance-row">
+                                <div class="owner-balance-value" id="guildDebtValue">-</div>
+                            </div>
+                            <div class="owner-muted" id="guildDebtRatio">-</div>
+                        </div>
+                    </div>
+
+                    <div class="owner-chart-card">
+                        <div class="owner-card-title">Gráfica semanal (Lun - Dom)</div>
+                        <canvas id="guildWeeklyChart" height="120"></canvas>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <div class="modal-overlay" id="modModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Control de balance</div>
+                <button class="modal-close" id="modCloseBtn" type="button">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-grid">
+                    <div class="modal-field">
+                        <label for="modAction">Acción</label>
+                        <select id="modAction">
+                            <option value="audit">Auditar (ver historial)</option>
+                            <option value="load">Cargar balance (+)</option>
+                            <option value="pay">Pagar (-)</option>
+                            <option value="set">Establecer balance</option>
+                            <option value="autosplit">Auto split</option>
+                        </select>
+                    </div>
+                    <div class="modal-field">
+                        <label for="memberFilter">Filtro</label>
+                        <select id="memberFilter">
+                            <option value="role">Rol > everyone</option>
+                            <option value="voice">En canal de voz</option>
+                        </select>
+                    </div>
+                    <div class="modal-field" id="voiceChannelField" style="grid-column: 1 / -1; display:none;">
+                        <label for="voiceChannelSelect">Canal de voz</label>
+                        <select id="voiceChannelSelect"></select>
+                    </div>
+                    <div class="modal-field" id="announceChannelField" style="grid-column: 1 / -1; display:none;">
+                        <label for="announceChannelSelect">Canal para enviar mensaje</label>
+                        <select id="announceChannelSelect"></select>
+                    </div>
+                    <div class="modal-field" style="grid-column: 1 / -1;">
+                        <label for="memberSelect">Usuario</label>
+                        <select id="memberSelect"></select>
+                    </div>
+                    <div class="modal-field" id="amountField" style="grid-column: 1 / -1;">
+                        <label for="modAmount">Monto</label>
+                        <input id="modAmount" type="number" step="1" autocomplete="off" placeholder="0">
+                    </div>
+                    <div class="modal-field" id="splitTotalField" style="grid-column: 1 / -1; display:none;">
+                        <label for="splitTotal">Monto total a repartir</label>
+                        <input id="splitTotal" type="number" step="1" autocomplete="off" placeholder="0">
+                    </div>
+                    <div class="modal-field" id="splitRepairField" style="grid-column: 1 / -1; display:none;">
+                        <label for="splitRepair">Costo de reparación</label>
+                        <input id="splitRepair" type="number" step="1" autocomplete="off" placeholder="0">
+                    </div>
+                    <div class="modal-field" id="splitPercentField" style="grid-column: 1 / -1; display:none;">
+                        <label for="splitPercent">Porcentaje (%)</label>
+                        <input id="splitPercent" type="number" step="0.01" autocomplete="off" placeholder="0">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="login-btn" id="modApplyBtn" type="button">Aplicar</button>
+                </div>
+                <div class="modal-hint" id="modHint" style="display:none;"></div>
+                <table class="activities-table" id="auditTable" style="display:none; margin-top: 14px;">
+                    <thead>
+                        <tr>
+                            <th>Admin</th>
+                            <th>Fecha</th>
+                            <th>Tipo</th>
+                            <th>Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auditTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js?v=6"></script>
+</body>
+</html>
