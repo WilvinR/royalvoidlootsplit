@@ -10,6 +10,7 @@ const modCloseBtn = document.getElementById('modCloseBtn');
 const modAction = document.getElementById('modAction');
 const memberFilter = document.getElementById('memberFilter');
 const memberSelect = document.getElementById('memberSelect');
+const memberCheckboxList = document.getElementById('memberCheckboxList');
 const voiceChannelField = document.getElementById('voiceChannelField');
 const voiceChannelSelect = document.getElementById('voiceChannelSelect');
 const announceChannelField = document.getElementById('announceChannelField');
@@ -429,11 +430,7 @@ function syncMemberUI() {
     const filt = String(memberFilter?.value || 'role');
     const isVoice = filt === 'voice';
     if (voiceChannelField) voiceChannelField.style.display = isVoice ? 'block' : 'none';
-    if (memberSelect) {
-        // Multi-select is enabled for both filters; audit action will enforce selecting only 1 user.
-        memberSelect.multiple = true;
-        memberSelect.size = 6;
-    }
+    if (memberSelect) memberSelect.style.display = 'none';
 }
 
 function _enableClickToggleMultiSelect(selectEl) {
@@ -461,8 +458,7 @@ function _enableClickToggleMultiSelect(selectEl) {
 }
 
 async function loadMemberOptions() {
-    if (!selectedGuildId || !memberSelect) return;
-    _enableClickToggleMultiSelect(memberSelect);
+    if (!selectedGuildId) return;
     const filt = String(memberFilter?.value || 'role');
     const qs = new URLSearchParams({ guild_id: selectedGuildId, filter: filt });
     if (filt === 'voice' && voiceChannelSelect && voiceChannelSelect.value) {
@@ -470,7 +466,8 @@ async function loadMemberOptions() {
     }
     const res = await apiFetch(`/api/members?${qs.toString()}`, { method: 'GET' });
     if (!res.ok) {
-        memberSelect.innerHTML = '';
+        if (memberSelect) memberSelect.innerHTML = '';
+        if (memberCheckboxList) memberCheckboxList.innerHTML = '';
         return;
     }
     const data = await res.json();
@@ -489,20 +486,44 @@ async function loadMemberOptions() {
     }
 
     lastVoiceMembers = members;
-    memberSelect.innerHTML = members
-        .map(m => `<option value="${escapeHtml(String(m.id || ''))}">${escapeHtml(String(m.name || m.id || ''))}</option>`)
-        .join('');
 
-    if (filt === 'voice') {
-        const count = memberSelect.options ? memberSelect.options.length : 0;
-        memberSelect.size = Math.max(3, Math.min(6, count || 0));
-        for (const opt of Array.from(memberSelect.options)) {
-            opt.selected = true;
+    if (memberSelect) {
+        memberSelect.innerHTML = members
+            .map(m => `<option value="${escapeHtml(String(m.id || ''))}">${escapeHtml(String(m.name || m.id || ''))}</option>`)
+            .join('');
+    }
+
+    if (memberCheckboxList) {
+        memberCheckboxList.innerHTML = '';
+        for (const m of members) {
+            const id = String(m.id || '').trim();
+            const name = String(m.name || m.id || '').trim();
+            if (!/^\d{5,}$/.test(id)) continue;
+
+            const item = document.createElement('label');
+            item.className = 'member-checkbox-item';
+            item.innerHTML = `
+                <input type="checkbox" value="${escapeHtml(id)}">
+                <span class="member-checkbox-name">${escapeHtml(name)}</span>
+            `;
+            memberCheckboxList.appendChild(item);
+        }
+
+        if (filt === 'voice') {
+            for (const cb of memberCheckboxList.querySelectorAll('input[type="checkbox"]')) {
+                cb.checked = true;
+            }
         }
     }
 }
 
 function getSelectedUserIds() {
+    if (memberCheckboxList) {
+        const ids = Array.from(memberCheckboxList.querySelectorAll('input[type="checkbox"]:checked'))
+            .map(cb => String(cb.value || '').trim());
+        const clean = ids.filter(x => /^\d{5,}$/.test(x));
+        if (clean.length > 0) return clean;
+    }
     if (!memberSelect) return [];
     const ids = Array.from(memberSelect.selectedOptions || []).map(o => String(o.value || '').trim());
     return ids.filter(x => /^\d{5,}$/.test(x));

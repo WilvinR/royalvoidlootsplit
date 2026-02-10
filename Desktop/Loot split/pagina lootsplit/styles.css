@@ -363,6 +363,39 @@ body {
     color: rgba(255, 255, 255, 0.95);
 }
 
+.member-checkbox-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.06);
+    max-height: 240px;
+    overflow: auto;
+}
+
+.member-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.member-checkbox-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+}
+
+.member-checkbox-name {
+    font-size: 14px;
+    font-weight: 700;
+    opacity: 0.95;
+}
+
 .modal-actions {
     margin-top: 14px;
     display: flex;
