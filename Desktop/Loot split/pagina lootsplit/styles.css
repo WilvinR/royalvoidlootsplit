@@ -396,6 +396,21 @@ body {
     opacity: 0.95;
 }
 
+.mod-success {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 54px;
+    border-radius: 14px;
+    border: 1px solid rgba(38, 222, 129, 0.35);
+    background: rgba(38, 222, 129, 0.12);
+    color: rgba(38, 222, 129, 0.98);
+    font-weight: 900;
+    font-size: 34px;
+    line-height: 1;
+}
+
 .modal-actions {
     margin-top: 14px;
     display: flex;

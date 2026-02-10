@@ -24,6 +24,7 @@ const splitRepair = document.getElementById('splitRepair');
 const splitPercentField = document.getElementById('splitPercentField');
 const splitPercent = document.getElementById('splitPercent');
 const modApplyBtn = document.getElementById('modApplyBtn');
+const modSuccess = document.getElementById('modSuccess');
 const modHint = document.getElementById('modHint');
 const auditTable = document.getElementById('auditTable');
 const auditTableBody = document.getElementById('auditTableBody');
@@ -366,6 +367,7 @@ function openModModal() {
     modModal.classList.add('is-open');
     console.log('mod modal open');
     hideModHint();
+    hideModSuccess();
     syncActionUI();
     syncMemberUI();
     loadAnnounceChannels();
@@ -390,6 +392,7 @@ function closeModModal() {
     if (!modModal) return;
     modModal.classList.remove('is-open');
     hideModHint();
+    hideModSuccess();
     setAuditVisible(false);
 }
 
@@ -405,6 +408,34 @@ function hideModHint() {
     modHint.textContent = '';
 }
 
+function showModSuccess() {
+    if (!modSuccess) return;
+    modSuccess.style.display = 'flex';
+    window.clearTimeout(modSuccess.__hideT);
+    modSuccess.__hideT = window.setTimeout(() => {
+        modSuccess.style.display = 'none';
+    }, 1200);
+}
+
+function hideModSuccess() {
+    if (!modSuccess) return;
+    modSuccess.style.display = 'none';
+    window.clearTimeout(modSuccess.__hideT);
+}
+
+function resetModFields() {
+    if (modAmount) modAmount.value = '';
+    if (splitTotal) splitTotal.value = '';
+    if (splitRepair) splitRepair.value = '';
+    if (splitPercent) splitPercent.value = '';
+    if (announceChannelSelect) announceChannelSelect.value = '';
+    if (memberCheckboxList) {
+        for (const cb of memberCheckboxList.querySelectorAll('input[type="checkbox"]')) {
+            cb.checked = false;
+        }
+    }
+}
+
 function setAuditVisible(visible) {
     if (!auditTable) return;
     auditTable.style.display = visible ? 'table' : 'none';
@@ -417,7 +448,7 @@ function syncActionUI() {
     if (amountField) amountField.style.display = needsAmount ? 'block' : 'none';
     setAuditVisible(action === 'audit');
     if (announceChannelField) {
-        announceChannelField.style.display = action === 'load' ? 'block' : 'none';
+        announceChannelField.style.display = (action === 'load' || action === 'autosplit') ? 'block' : 'none';
     }
 
     const isSplit = action === 'autosplit';
@@ -578,11 +609,19 @@ async function runAudit(userId) {
 
 async function applyModAction() {
     hideModHint();
+    hideModSuccess();
     if (!selectedGuildId) return;
     const action = String(modAction?.value || 'audit');
     const userIds = getSelectedUserIds();
     if (userIds.length === 0) {
         showModHint('Selecciona al menos un usuario válido.');
+        return;
+    }
+
+    const needsAnnounce = action === 'load' || action === 'autosplit';
+    const announce_channel_id = needsAnnounce ? String(announceChannelSelect?.value || '').trim() : '';
+    if (needsAnnounce && !announce_channel_id) {
+        showModHint('Selecciona un canal para enviar mensaje.');
         return;
     }
 
@@ -639,7 +678,7 @@ async function applyModAction() {
                     user_ids: userIds,
                     amount: Math.abs(perUser),
                     mode: 'add',
-                    announce_channel_id: '',
+                    announce_channel_id,
                 }),
             });
             const data = await res.json().catch(() => ({}));
@@ -648,6 +687,8 @@ async function applyModAction() {
                 return;
             }
             showModHint(`Auto split listo. Total: ${formatAmount(total)} | Reparación: ${formatAmount(repair)} | %: ${pct}% (${formatAmount(fee)}) | Neto: ${formatAmount(net)} | Por persona: ${formatAmount(perUser)} | Usuarios: ${userIds.length}`);
+            showModSuccess();
+            resetModFields();
             await refreshData(selectedGuildId);
         } finally {
             modApplyBtn.disabled = false;
@@ -676,7 +717,6 @@ async function applyModAction() {
 
     modApplyBtn.disabled = true;
     try {
-        const announce_channel_id = action === 'load' ? String(announceChannelSelect?.value || '').trim() : '';
         const res = await apiFetch(`/api/admin/balance`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -708,6 +748,8 @@ async function applyModAction() {
         } else {
             showModHint(`Listo. Nuevo balance: ${formatAmount(data.new_balance)}`);
         }
+        showModSuccess();
+        resetModFields();
         await refreshData(selectedGuildId);
     } finally {
         modApplyBtn.disabled = false;
