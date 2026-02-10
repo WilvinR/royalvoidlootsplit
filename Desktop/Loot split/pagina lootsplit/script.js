@@ -687,6 +687,22 @@ async function applyModAction() {
             showModHint((data && data.error) ? String(data.error) : 'No se pudo aplicar.');
             return;
         }
+
+        if (action === 'pay') {
+            const perUser = Math.abs(amount);
+            const totalPaid = perUser * userIds.length;
+            if (Number.isFinite(totalPaid) && totalPaid > 0) {
+                const gres = await apiFetch(`/api/owner/guild_balance`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ guild_id: selectedGuildId, mode: 'add', amount: -totalPaid }),
+                });
+                const gdata = await gres.json().catch(() => ({}));
+                if (!gres.ok || !gdata.success) {
+                    showModHint('Pago aplicado a usuarios, pero no se pudo descontar del balance del gremio.');
+                }
+            }
+        }
         if (Array.isArray(data.results)) {
             showModHint(`Listo. Aplicado a ${data.results.length} usuarios.`);
         } else {
