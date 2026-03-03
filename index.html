@@ -4,42 +4,140 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RoyalVoid Loot split</title>
-    <link rel="stylesheet" href="styles.css?v=11">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css?v=7">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Exo+2:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <!-- Header with Logo -->
-        <header class="header">
-            <div class="logo-container">
-                <div class="logo">
-                    <i class="fas fa-crown"></i>
-                    <i class="fas fa-swords"></i>
-                    <span class="logo-text">RoyalVoid Loot split</span>
+    <aside class="sidebar">
+        <div class="sidebar-logo">G</div>
+
+        <button class="nav-item" type="button" data-view="splits" id="nav-splits" aria-label="Loot Splits">
+            <span>⚔️</span><div class="tooltip">Loot Splits</div>
+        </button>
+        <button class="nav-item active" type="button" data-view="balances" id="nav-balances" aria-label="Balances">
+            <span>💰</span><div class="tooltip">Balances</div>
+        </button>
+        <button class="nav-item" type="button" data-view="members" id="nav-members" aria-label="Miembros">
+            <span>👥</span><div class="tooltip">Miembros</div>
+        </button>
+
+        <div class="nav-divider"></div>
+
+        <button class="nav-item" type="button" data-view="audit" id="nav-audit" aria-label="Auditoría">
+            <span>📊</span><div class="tooltip">Auditoría</div>
+        </button>
+
+        <button class="nav-item" type="button" id="modOpenBtn" aria-label="Nuevo Split (Mod)" style="display:none;">
+            <span>➕</span><div class="tooltip">Nuevo Split (Mod)</div>
+        </button>
+
+        <div class="nav-spacer"></div>
+
+        <div class="sidebar-user" id="sidebarUser">
+            <div class="sidebar-user-auth">
+                <div class="user-pill" id="userPill" style="display:none;">
+                    <img id="userAvatar" alt="Avatar" style="display:none;" />
+                    <span id="userName"></span>
                 </div>
-                <div class="user-pill" id="userPill" style="display:none;"></div>
-            </div>
-            <div class="header-actions">
+                <div class="sidebar-user-sub" id="serverPill" style="display:none;"></div>
                 <a class="login-btn" id="loginBtn" href="https://royalvoidlootsplit.discloud.app/login">Iniciar sesión</a>
                 <a class="login-btn" id="logoutBtn" href="https://royalvoidlootsplit.discloud.app/logout" style="display:none;">Salir</a>
             </div>
-        </header>
+        </div>
+    </aside>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <div class="table-container">
-                <div class="balance-controls">
-                    <div class="controls-left">
-                        <div class="server-pill" id="serverPill" style="display:none;"></div>
-                        <button class="server-action-btn" id="modOpenBtn" type="button" style="display:none;">+</button>
+    <main class="main">
+        <div class="view" id="view-splits">
+            <div class="page-header">
+                <div>
+                    <div class="page-title"><div class="page-title-dot"></div>Loot Splits</div>
+                    <div class="page-sub">Lista de actividades creadas</div>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-hdr">
+                    <div class="panel-hdr-title">⚔️ Actividades</div>
+                    <span class="badge badge-pending">Pendiente</span>
+                </div>
+                <table class="activities-table" id="splitsTable">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Actividad</th>
+                            <th style="text-align:right;">Total</th>
+                            <th style="text-align:right;">Por persona</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="splitsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="view" id="view-new-split">
+            <div class="page-header">
+                <div>
+                    <div class="page-title"><div class="page-title-dot"></div>Nuevo Split</div>
+                    <div class="page-sub">Crea una actividad en estado pendiente</div>
+                </div>
+            </div>
+
+            <div class="split-grid">
+                <div class="panel">
+                    <div class="panel-hdr">
+                        <div class="panel-hdr-title">📌 Datos de la actividad</div>
                     </div>
-                    <div class="controls-right">
-                        <div class="balance-summary">
-                            <div class="balance-label">Balance</div>
-                            <div class="balance-value" id="balanceValue">-</div>
+                    <div class="split-body">
+                        <div class="split-field">
+                            <label for="nsDate">Fecha</label>
+                            <input id="nsDate" type="date" />
+                        </div>
+                        <div class="split-field">
+                            <label for="nsName">Nombre de la actividad</label>
+                            <input id="nsName" type="text" autocomplete="off" placeholder="Ej: Estáticas" />
+                        </div>
+                        <div class="split-field">
+                            <label for="nsTotal">Monto total generado</label>
+                            <input id="nsTotal" type="text" autocomplete="off" placeholder="5000000 o 5m" />
+                        </div>
+                        <div class="split-field">
+                            <label for="nsChannelSelect">Canal para notificar</label>
+                            <select id="nsChannelSelect"></select>
+                        </div>
+                        <div class="split-actions">
+                            <button class="login-btn" id="nsCreateBtn" type="button">Crear Loot Split</button>
+                        </div>
+                        <div class="split-hint" id="nsHint" style="display:none;"></div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-hdr">
+                        <div class="panel-hdr-title">👥 Participantes + Vista previa</div>
+                    </div>
+                    <div class="split-body">
+                        <div class="split-members" id="nsMembersList"></div>
+                        <div class="split-preview">
+                            <div class="split-preview-title">Vista previa</div>
+                            <div class="split-preview-meta" id="nsPreviewMeta">-</div>
+                            <div class="split-preview-list" id="nsPreviewList"></div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="view active" id="view-balances">
+            <div class="page-header">
+                <div>
+                    <div class="page-title"><div class="page-title-dot"></div>Balances</div>
+                    <div class="page-sub">Balance acumulado por miembro</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-hdr">
+                    <div class="panel-hdr-title">💰 Balance por Miembro</div>
                 </div>
 
                 <table class="activities-table" id="historyTable">
@@ -49,12 +147,39 @@
                             <th style="text-align:right;">Balance</th>
                         </tr>
                     </thead>
-                    <tbody id="historyTableBody">
-                    </tbody>
+                    <tbody id="historyTableBody"></tbody>
                 </table>
             </div>
-        </main>
-    </div>
+        </div>
+
+        <div class="view" id="view-members">
+            <div class="page-header">
+                <div>
+                    <div class="page-title"><div class="page-title-dot"></div>Miembros</div>
+                    <div class="page-sub">Miembros del gremio</div>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-hdr"><div class="panel-hdr-title">👥 Miembros</div></div>
+                <div class="members-grid" id="membersGrid"></div>
+            </div>
+        </div>
+
+        <div class="view" id="view-audit">
+            <div class="page-header">
+                <div>
+                    <div class="page-title"><div class="page-title-dot"></div>Auditoría</div>
+                    <div class="page-sub">Para ver historial, usa el modal → Acción: Auditar</div>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-hdr"><div class="panel-hdr-title">📋 Historial</div></div>
+                <div style="padding:36px 18px;color:var(--text2);text-align:center;">
+                    La auditoría se consulta desde el modal para un usuario específico.
+                </div>
+            </div>
+        </div>
+    </main>
 
     <div class="modal-overlay" id="modModal">
         <div class="modal">
@@ -63,7 +188,6 @@
                 <button class="modal-close" id="modCloseBtn" type="button">×</button>
             </div>
             <div class="modal-body">
-                <div class="tx-success" id="txSuccess" style="display:none;">✓</div>
                 <div class="modal-grid">
                     <div class="modal-field">
                         <label for="modAction">Acción</label>
@@ -91,20 +215,21 @@
                         <select id="announceChannelSelect"></select>
                     </div>
                     <div class="modal-field" style="grid-column: 1 / -1;">
-                        <label>Usuarios</label>
-                        <div class="member-list" id="memberList"></div>
+                        <label for="memberSelect">Usuario</label>
+                        <div class="member-checkbox-list" id="memberCheckboxList"></div>
+                        <select id="memberSelect" style="display:none;"></select>
                     </div>
                     <div class="modal-field" id="amountField" style="grid-column: 1 / -1;">
                         <label for="modAmount">Monto</label>
-                        <input id="modAmount" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+                        <input id="modAmount" type="number" step="1" autocomplete="off" placeholder="0">
                     </div>
                     <div class="modal-field" id="splitTotalField" style="grid-column: 1 / -1; display:none;">
                         <label for="splitTotal">Monto total a repartir</label>
-                        <input id="splitTotal" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+                        <input id="splitTotal" type="number" step="1" autocomplete="off" placeholder="0">
                     </div>
                     <div class="modal-field" id="splitRepairField" style="grid-column: 1 / -1; display:none;">
                         <label for="splitRepair">Costo de reparación</label>
-                        <input id="splitRepair" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+                        <input id="splitRepair" type="number" step="1" autocomplete="off" placeholder="0">
                     </div>
                     <div class="modal-field" id="splitPercentField" style="grid-column: 1 / -1; display:none;">
                         <label for="splitPercent">Porcentaje (%)</label>
@@ -114,6 +239,7 @@
                 <div class="modal-actions">
                     <button class="login-btn" id="modApplyBtn" type="button">Aplicar</button>
                 </div>
+                <div class="mod-success" id="modSuccess" style="display:none;">✓</div>
                 <div class="modal-hint" id="modHint" style="display:none;"></div>
                 <table class="activities-table" id="auditTable" style="display:none; margin-top: 14px;">
                     <thead>
@@ -130,6 +256,6 @@
         </div>
     </div>
 
-    <script src="script.js?v=11"></script>
+    <script src="script.js?v=7"></script>
 </body>
 </html>
