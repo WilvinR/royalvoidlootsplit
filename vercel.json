@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://royalvoidlootsplit.discloud.app/api/:path*" },
+    { "source": "/login", "destination": "https://royalvoidlootsplit.discloud.app/login" },
+    { "source": "/logout", "destination": "https://royalvoidlootsplit.discloud.app/logout" },
+    { "source": "/oauth/:path*", "destination": "https://royalvoidlootsplit.discloud.app/oauth/:path*" }
+  ]
+}
