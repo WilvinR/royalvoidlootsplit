@@ -637,6 +637,63 @@ def _db_init():
         conn.close()
 
 
+def _table_columns(cur, table: str) -> set[str]:
+    cur.execute(f"PRAGMA table_info({table})")
+    return {str(row[1]) for row in cur.fetchall()}
+
+
+def _db_migrate_member_roster() -> None:
+    """Recrea tablas de roster si quedaron con esquema antiguo (p. ej. sin columna day)."""
+    conn = _db_connect()
+    try:
+        cur = conn.cursor()
+
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='member_attendance'")
+        if cur.fetchone():
+            required = {"guild_id", "user_id", "week", "day", "mark"}
+            cols = _table_columns(cur, "member_attendance")
+            if not required.issubset(cols):
+                print(f"[DB MIGRATE] member_attendance esquema antiguo ({sorted(cols)}), recreando…")
+                cur.execute("DROP TABLE member_attendance")
+                cur.execute(
+                    """
+                    CREATE TABLE member_attendance (
+                        guild_id INTEGER NOT NULL,
+                        user_id INTEGER NOT NULL,
+                        week TEXT NOT NULL,
+                        day TEXT NOT NULL,
+                        mark TEXT NOT NULL DEFAULT '',
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (guild_id, user_id, week, day)
+                    )
+                    """
+                )
+
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='member_roles'")
+        if cur.fetchone():
+            required = {"guild_id", "user_id", "primary_role", "secondary_role"}
+            cols = _table_columns(cur, "member_roles")
+            if not required.issubset(cols):
+                print(f"[DB MIGRATE] member_roles esquema antiguo ({sorted(cols)}), recreando…")
+                cur.execute("DROP TABLE member_roles")
+                cur.execute(
+                    """
+                    CREATE TABLE member_roles (
+                        guild_id INTEGER NOT NULL,
+                        user_id INTEGER NOT NULL,
+                        primary_role TEXT NOT NULL DEFAULT '',
+                        secondary_role TEXT NOT NULL DEFAULT '',
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (guild_id, user_id)
+                    )
+                    """
+                )
+
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def _db_fix_negative_balances():
     """Corrige balances negativos existentes — los pone a 0."""
     conn = _db_connect()
@@ -1235,8 +1292,27 @@ async def api_members_roster_handler(request: web.Request) -> web.StreamResponse
                         uid = int(row["user_id"])
                         att_map.setdefault(uid, {})[str(row["day"])] = str(row["mark"] or "")
                 except sqlite3.OperationalError as db_err:
-                    print(f"[roster] DB tables missing or error, returning members without roster data: {db_err}")
-                    _db_init()
+                    print(f"[roster] Error DB, migrando tablas y reintentando: {db_err}")
+                    conn.close()
+                    _db_migrate_member_roster()
+                    conn = _db_connect()
+                    cur = conn.cursor()
+                    cur.execute(
+                        f"SELECT user_id, primary_role, secondary_role FROM member_roles WHERE guild_id = ? AND user_id IN ({placeholders})",
+                        [gid, *user_ids],
+                    )
+                    for row in cur.fetchall():
+                        roles_map[int(row["user_id"])] = {
+                            "primary_role": str(row["primary_role"] or ""),
+                            "secondary_role": str(row["secondary_role"] or ""),
+                        }
+                    cur.execute(
+                        f"SELECT user_id, day, mark FROM member_attendance WHERE guild_id = ? AND week = ? AND user_id IN ({placeholders})",
+                        [gid, week, *user_ids],
+                    )
+                    for row in cur.fetchall():
+                        uid = int(row["user_id"])
+                        att_map.setdefault(uid, {})[str(row["day"])] = str(row["mark"] or "")
         finally:
             conn.close()
 
@@ -3310,6 +3386,7 @@ async def api_admin_debts_handler(request: web.Request) -> web.StreamResponse:
 async def start_webhook_server() -> tuple[web.AppRunner, web.TCPSite]:
 
     _db_init()
+    _db_migrate_member_roster()
     _db_fix_negative_balances()
     _db_cleanup_zero_balances()  # FIX 2: limpiar filas con balance = 0 al arrancar
 
