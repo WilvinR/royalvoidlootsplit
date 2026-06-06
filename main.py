@@ -607,6 +607,31 @@ def _db_init():
         cur.execute(
             "CREATE INDEX IF NOT EXISTS idx_guild_debts_guild ON guild_debts(guild_id)"
         )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS member_roles (
+                guild_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                primary_role TEXT NOT NULL DEFAULT '',
+                secondary_role TEXT NOT NULL DEFAULT '',
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (guild_id, user_id)
+            )
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS member_attendance (
+                guild_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                week TEXT NOT NULL,
+                day TEXT NOT NULL,
+                mark TEXT NOT NULL DEFAULT '',
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (guild_id, user_id, week, day)
+            )
+            """
+        )
         conn.commit()
     finally:
         conn.close()
@@ -1138,6 +1163,186 @@ async def api_members_handler(request: web.Request) -> web.StreamResponse:
     return web.json_response(
         {"success": True, "guild_id": gid, "filter": filt, "members": members_out, "channels": channels_out}
     )
+
+VALID_ATT_DAYS = frozenset({"mon", "tue", "wed", "thu", "fri"})
+VALID_ATT_MARKS = frozenset({"", "check", "x"})
+
+def _guild_role_members(guild) -> list:
+    members_out = []
+    everyone_id = guild.id
+    for m in guild.members:
+        if m is None or m.bot:
+            continue
+        roles = list(getattr(m, "roles", []) or [])
+        roles = [r for r in roles if getattr(r, "id", None) != everyone_id]
+        if len(roles) == 0:
+            continue
+        members_out.append({"id": str(m.id), "name": str(m.display_name)})
+    members_out.sort(key=lambda x: str(x.get("name", "")).lower())
+    return members_out
+
+async def api_members_roster_handler(request: web.Request) -> web.StreamResponse:
+    sess = _require_session(request)
+    if not sess:
+        return await _json_error(401, "Not logged in")
+
+    if request.method == "GET":
+        guild_id = request.query.get("guild_id", "").strip()
+        week = request.query.get("week", "").strip()
+        if not guild_id:
+            cfg = _configured_guild_id()
+            if cfg is not None:
+                guild_id = str(cfg)
+        if not guild_id.isdigit():
+            return await _json_error(400, "Invalid guild_id")
+        if not week:
+            return await _json_error(400, "Missing week")
+        gid = int(guild_id)
+
+        guild = bot.get_guild(gid)
+        if guild is None:
+            return await _json_error(404, "Guild not found")
+        sess_user_id = int((sess.get("user") or {}).get("id") or 0)
+        if sess_user_id and guild.get_member(sess_user_id) is None:
+            return await _json_error(403, "Not a member of this guild")
+
+        can_manage = await _can_manage_guild(sess, gid)
+        base_members = _guild_role_members(guild)
+        user_ids = [int(m["id"]) for m in base_members]
+
+        roles_map = {}
+        att_map = {}
+        conn = _db_connect()
+        try:
+            cur = conn.cursor()
+            if user_ids:
+                placeholders = ",".join("?" * len(user_ids))
+                cur.execute(
+                    f"SELECT user_id, primary_role, secondary_role FROM member_roles WHERE guild_id = ? AND user_id IN ({placeholders})",
+                    [gid, *user_ids],
+                )
+                for row in cur.fetchall():
+                    roles_map[int(row["user_id"])] = {
+                        "primary_role": str(row["primary_role"] or ""),
+                        "secondary_role": str(row["secondary_role"] or ""),
+                    }
+                cur.execute(
+                    f"SELECT user_id, day, mark FROM member_attendance WHERE guild_id = ? AND week = ? AND user_id IN ({placeholders})",
+                    [gid, week, *user_ids],
+                )
+                for row in cur.fetchall():
+                    uid = int(row["user_id"])
+                    att_map.setdefault(uid, {})[str(row["day"])] = str(row["mark"] or "")
+        finally:
+            conn.close()
+
+        out = []
+        for m in base_members:
+            uid = int(m["id"])
+            r = roles_map.get(uid, {})
+            att = att_map.get(uid, {})
+            out.append({
+                "user_id": str(uid),
+                "name": m["name"],
+                "primary_role": r.get("primary_role", ""),
+                "secondary_role": r.get("secondary_role", ""),
+                "attendance": {d: att.get(d, "") for d in ("mon", "tue", "wed", "thu", "fri")},
+            })
+
+        return web.json_response({
+            "success": True,
+            "guild_id": gid,
+            "week": week,
+            "can_manage": can_manage,
+            "members": out,
+        })
+
+    if request.method == "POST":
+        try:
+            body = await request.json()
+        except Exception:
+            return await _json_error(400, "Invalid JSON")
+        if not isinstance(body, dict):
+            return await _json_error(400, "Invalid body")
+
+        guild_id = str(body.get("guild_id", "")).strip()
+        week = str(body.get("week", "")).strip()
+        user_id = str(body.get("user_id", "")).strip()
+        if not guild_id.isdigit():
+            return await _json_error(400, "Invalid guild_id")
+        if not week:
+            return await _json_error(400, "Missing week")
+        if not user_id.isdigit():
+            return await _json_error(400, "Invalid user_id")
+        gid = int(guild_id)
+        uid = int(user_id)
+
+        if not await _can_manage_guild(sess, gid):
+            return await _json_error(403, "Forbidden")
+
+        guild = bot.get_guild(gid)
+        if guild is None:
+            return await _json_error(404, "Guild not found")
+        if guild.get_member(uid) is None:
+            return await _json_error(404, "User not in guild")
+
+        conn = _db_connect()
+        try:
+            cur = conn.cursor()
+
+            if "primary_role" in body or "secondary_role" in body:
+                primary = str(body.get("primary_role", "")).strip() if "primary_role" in body else None
+                secondary = str(body.get("secondary_role", "")).strip() if "secondary_role" in body else None
+                cur.execute(
+                    "SELECT primary_role, secondary_role FROM member_roles WHERE guild_id = ? AND user_id = ?",
+                    (gid, uid),
+                )
+                row = cur.fetchone()
+                if row:
+                    p = primary if primary is not None else str(row["primary_role"] or "")
+                    s = secondary if secondary is not None else str(row["secondary_role"] or "")
+                    cur.execute(
+                        "UPDATE member_roles SET primary_role = ?, secondary_role = ?, updated_at = CURRENT_TIMESTAMP WHERE guild_id = ? AND user_id = ?",
+                        (p, s, gid, uid),
+                    )
+                else:
+                    p = primary if primary is not None else ""
+                    s = secondary if secondary is not None else ""
+                    cur.execute(
+                        "INSERT INTO member_roles (guild_id, user_id, primary_role, secondary_role) VALUES (?, ?, ?, ?)",
+                        (gid, uid, p, s),
+                    )
+
+            if "day" in body:
+                day = str(body.get("day", "")).strip().lower()
+                mark = str(body.get("mark", "")).strip().lower()
+                if day not in VALID_ATT_DAYS:
+                    return await _json_error(400, "Invalid day")
+                if mark not in VALID_ATT_MARKS:
+                    return await _json_error(400, "Invalid mark")
+                if mark == "":
+                    cur.execute(
+                        "DELETE FROM member_attendance WHERE guild_id = ? AND user_id = ? AND week = ? AND day = ?",
+                        (gid, uid, week, day),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        INSERT INTO member_attendance (guild_id, user_id, week, day, mark, updated_at)
+                        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                        ON CONFLICT(guild_id, user_id, week, day)
+                        DO UPDATE SET mark = excluded.mark, updated_at = CURRENT_TIMESTAMP
+                        """,
+                        (gid, uid, week, day, mark),
+                    )
+
+            conn.commit()
+        finally:
+            conn.close()
+
+        return web.json_response({"success": True})
+
+    return await _json_error(405, "Method not allowed")
 
 async def api_channels_handler(request: web.Request) -> web.StreamResponse:
     sess = _require_session(request)
@@ -3114,14 +3319,9 @@ async def start_webhook_server() -> tuple[web.AppRunner, web.TCPSite]:
     app.router.add_get("/api/history", api_history_handler)
     app.router.add_get("/api/leaderboard", api_leaderboard_handler)
     app.router.add_get("/api/members", api_members_handler)
+    app.router.add_route("GET", "/api/members/roster", api_members_roster_handler)
+    app.router.add_route("POST", "/api/members/roster", api_members_roster_handler)
     app.router.add_get("/api/channels", api_channels_handler)
-    app.router.add_route("GET", "/api/zvz", api_zvz_handler)
-    app.router.add_route("POST", "/api/zvz", api_zvz_handler)
-    app.router.add_get("/api/actividad/points", api_activity_points_handler)
-    app.router.add_post("/api/actividad/redeem", api_activity_redeem_handler)
-    app.router.add_post("/api/actividad/gen", api_activity_gen_handler)
-    app.router.add_get("/api/actividad/codes", api_activity_codes_handler)
-    app.router.add_post("/api/actividad/reset", api_activity_reset_handler)
     app.router.add_route("GET", "/api/activities", api_activities_handler)
     app.router.add_route("POST", "/api/activities", api_activities_handler)
     app.router.add_get("/api/activity_detail", api_activity_detail_handler)
@@ -3136,10 +3336,6 @@ async def start_webhook_server() -> tuple[web.AppRunner, web.TCPSite]:
     app.router.add_get("/api/owner/finance", api_owner_finance_handler)
     app.router.add_post("/api/owner/guild_balance", api_owner_guild_balance_handler)
     app.router.add_get("/api/owner/weekly", api_owner_weekly_handler)
-    app.router.add_route("GET", "/api/admin/debts", api_admin_debts_handler)
-    app.router.add_route("POST", "/api/admin/debts", api_admin_debts_handler)
-    app.router.add_route("PATCH", "/api/admin/debts", api_admin_debts_handler)
-    app.router.add_route("DELETE", "/api/admin/debts", api_admin_debts_handler)
 
     if os.getenv("SERVE_WEB", "1").strip() != "0":
         app.router.add_get("/", index_handler)

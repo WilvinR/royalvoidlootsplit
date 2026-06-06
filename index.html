@@ -4,9 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RoyalVoid Loot split</title>
-    <link rel="stylesheet" href="styles.css?v=18">
+    <link rel="stylesheet" href="styles.css?v=11">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Exo+2:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 </head>
 <body>
     <aside class="sidebar">
@@ -18,14 +17,8 @@
         <button class="nav-item active" type="button" data-view="balances" id="nav-balances" aria-label="Balances">
             <span>💰</span><div class="tooltip">Balances</div>
         </button>
-        <button class="nav-item" type="button" data-view="zvz" id="nav-zvz" aria-label="Composición ZvZ">
-            <span>🛡️</span><div class="tooltip">ZvZ Comp</div>
-        </button>
         <button class="nav-item" type="button" data-view="members" id="nav-members" aria-label="Miembros">
             <span>👥</span><div class="tooltip">Miembros</div>
-        </button>
-        <button class="nav-item" type="button" data-view="actividad" id="nav-actividad" aria-label="Actividad">
-            <span>⭐</span><div class="tooltip">Actividad</div>
         </button>
 
         <div class="nav-divider"></div>
@@ -34,34 +27,21 @@
             <span>📊</span><div class="tooltip">Auditoría</div>
         </button>
 
-        <button class="nav-item" type="button" data-view="admin" id="nav-admin" aria-label="Administración" style="display:none;">
-            <span>🛠️</span><div class="tooltip">Administración</div>
-        </button>
-
         <button class="nav-item" type="button" id="modOpenBtn" aria-label="Nuevo Split (Mod)" style="display:none;">
             <span>➕</span><div class="tooltip">Nuevo Split (Mod)</div>
         </button>
 
         <div class="nav-spacer"></div>
 
-        <!-- Botón de usuario/login — visible en sidebar desktop y en barra inferior móvil -->
-        <div class="nav-user-btn" id="navUserBtn">
-            <a class="nav-login-link" id="loginBtn" href="/login" aria-label="Iniciar sesión">
-                <span>🔑</span>
-                <div class="tooltip">Iniciar sesión</div>
-            </a>
-            <a class="nav-avatar-link" id="logoutBtn" href="#" aria-label="Cerrar sesión" style="display:none;">
-                <img id="userAvatar" alt="" />
-                <div class="tooltip">Cerrar sesión</div>
-            </a>
-        </div>
-
         <div class="sidebar-user" id="sidebarUser">
             <div class="sidebar-user-auth">
                 <div class="user-pill" id="userPill" style="display:none;">
+                    <img id="userAvatar" alt="Avatar" style="display:none;" />
                     <span id="userName"></span>
                 </div>
                 <div class="sidebar-user-sub" id="serverPill" style="display:none;"></div>
+                <a class="login-btn" id="loginBtn" href="/login">Iniciar sesión</a>
+                <a class="login-btn" id="logoutBtn" href="/logout" style="display:none;">Salir</a>
             </div>
         </div>
     </aside>
@@ -71,108 +51,85 @@
             <div class="page-header">
                 <div>
                     <div class="page-title"><div class="page-title-dot"></div>Loot Splits</div>
-                    <div class="page-sub">Selecciona actividades y gestiona el reparto de loot</div>
+                    <div class="page-sub">Lista de actividades creadas</div>
                 </div>
             </div>
             <div class="panel">
                 <div class="panel-hdr">
                     <div class="panel-hdr-title">⚔️ Actividades</div>
-                    <span class="badge badge-pending" id="splitsBadge">0 pendientes</span>
+                    <span class="badge badge-pending">Pendiente</span>
                 </div>
-                <div class="week-group" id="splitsList"></div>
-                <div class="dist-bar" id="distBar">
-                    <div class="dist-info"><b id="selCount">0</b> actividad seleccionada · Total: <b id="selTotal">0</b> 🪙</div>
-                    <button class="btn btn-gold btn-sm" id="distBtn" type="button">⚔️ Repartir Seleccionadas</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="view" id="view-detail">
-            <div class="detail-back" id="detailBack">← Volver a Loot Splits</div>
-
-            <div class="detail-header">
-                <div style="display:flex;align-items:flex-start;justify-content:space-between;">
-                    <div>
-                        <div class="detail-title" id="dTitle"></div>
-                        <div class="detail-meta">
-                            <span>📅 <span id="dDate"></span></span>
-                            <span id="dBadgeWrap"></span>
-                        </div>
-                    </div>
-                </div>
-                <div class="detail-stats">
-                    <div class="d-stat"><div class="d-stat-label">Total Generado</div><div class="d-stat-val" id="dTotal"></div></div>
-                    <div class="d-stat"><div class="d-stat-label">Participantes</div><div class="d-stat-val" id="dCount"></div></div>
-                    <div class="d-stat"><div class="d-stat-label">Por Persona</div><div class="d-stat-val" id="dEach"></div></div>
-                </div>
-            </div>
-
-            <div class="participants-panel">
-                <div class="panel-hdr"><div class="panel-hdr-title">👥 Participantes y Distribución</div></div>
-                <div id="dParticipants"></div>
+                <table class="activities-table" id="splitsTable">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Actividad</th>
+                            <th style="text-align:right;">Total</th>
+                            <th style="text-align:right;">Por persona</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="splitsTableBody"></tbody>
+                </table>
             </div>
         </div>
 
         <div class="view" id="view-new-split">
-            <a class="back" href="#" id="nsBackLink">← Volver a Loot Splits</a>
-
-            <div class="main-form" id="nsMainForm">
-                <div class="page-title"><div class="page-title-dot"></div>Nuevo Loot Split</div>
-                <div class="page-sub">Registra una nueva actividad y distribuye el loot equitativamente</div>
-
-                <div class="split-design-grid">
-                    <div class="panel">
-                        <div class="panel-hdr"><div class="panel-hdr-title">✦ Datos de la Actividad</div></div>
-                        <div class="form-grp">
-                            <label class="form-lbl" for="f-fecha">Fecha de la Actividad</label>
-                            <input type="date" class="form-input" id="f-fecha">
-                        </div>
-                        <div class="form-grp">
-                            <label class="form-lbl" for="f-nombre">Nombre de la Actividad</label>
-                            <input type="text" class="form-input" placeholder="Ej: Estáticas, Jefe de Mundo..." id="f-nombre">
-                        </div>
-                        <div class="form-grp">
-                            <label class="form-lbl" for="f-monto">Monto Total Generado 🪙</label>
-                            <input type="text" class="form-input" placeholder="Ej: 5000000 o 5m" id="f-monto">
-                            <div id="monto-hint" class="monto-hint" style="display:none;"></div>
-                        </div>
-                        <div style="padding:14px 16px;">
-                            <button class="btn btn-gold" id="nsCreateBtn" type="button">✦ Crear Loot Split</button>
-                        </div>
-                        <div class="split-hint" id="nsHint" style="display:none;"></div>
-                        <pre id="nsDebug" style="display:none; margin: 10px 16px 16px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg2); color: var(--text2); font-size: 12px; white-space: pre-wrap; word-break: break-word;"></pre>
-                    </div>
-
-                    <div style="display:flex;flex-direction:column;gap:16px;">
-                        <div class="panel">
-                            <div class="panel-hdr">
-                                <div class="panel-hdr-title">👥 Participantes</div>
-                                <span id="count-badge" class="count-badge">0 seleccionados</span>
-                            </div>
-                            <div style="padding:10px 12px;border-bottom:1px solid var(--border);">
-                                <input type="text" class="form-input" placeholder="🔍 Buscar miembro..." id="search-member" style="padding:7px 12px;">
-                            </div>
-                            <div class="form-grp" style="border-bottom:none;padding:10px 12px;">
-                                <div class="member-list" id="member-list"></div>
-                            </div>
-                        </div>
-
-                        <div class="panel">
-                            <div class="panel-hdr"><div class="panel-hdr-title">📊 Vista Previa del Split</div></div>
-                            <div class="preview-box">
-                                <div id="preview-content" class="preview-content">Completa los campos arriba</div>
-                            </div>
-                        </div>
-                    </div>
+            <div class="page-header">
+                <div>
+                    <div class="page-title"><div class="page-title-dot"></div>Nuevo Split</div>
+                    <div class="page-sub">Crea una actividad en estado pendiente</div>
                 </div>
             </div>
 
-            <div class="success-screen" id="success-screen">
-                <div style="font-size:60px;">✅</div>
-                <div style="font-family:'Cinzel',serif;font-size:24px;color:var(--white);">Actividad Creada</div>
-                <div style="font-size:13px;color:var(--text2);" id="success-detail"></div>
-                <div id="success-summary" class="success-summary-box"></div>
-                <button class="btn btn-gold" style="max-width:260px;margin-top:8px;" id="nsResetBtn" type="button">✦ Crear Otro Split</button>
+            <div class="split-grid">
+                <div class="panel">
+                    <div class="panel-hdr">
+                        <div class="panel-hdr-title">📌 Datos de la actividad</div>
+                    </div>
+                    <div class="split-body">
+                        <div class="split-field">
+                            <label for="nsDate">Fecha</label>
+                            <input id="nsDate" type="date" />
+                        </div>
+                        <div class="split-field">
+                            <label for="nsName">Nombre de la actividad</label>
+                            <input id="nsName" type="text" autocomplete="off" placeholder="Ej: Estáticas" />
+                        </div>
+                        <div class="split-field">
+                            <label for="nsTotal">Monto total generado</label>
+                            <input id="nsTotal" type="text" autocomplete="off" placeholder="5000000 o 5m" />
+                        </div>
+                        <div class="split-field">
+                            <label for="nsChannelSelect">Canal para notificar</label>
+                            <select id="nsChannelSelect"></select>
+                        </div>
+                        <div class="split-actions">
+                            <button class="login-btn" id="nsCreateBtn" type="button">Crear Loot Split</button>
+                        </div>
+                        <div class="split-hint" id="nsHint" style="display:none;"></div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-hdr">
+                        <div class="panel-hdr-title">👥 Participantes + Vista previa</div>
+                    </div>
+                    <div class="split-body">
+                        <div class="split-members-toolbar">
+                            <label for="nsVoiceSelect">Canal de voz</label>
+                            <select id="nsVoiceSelect">
+                                <option value="">Auto-seleccionar miembros conectados…</option>
+                            </select>
+                        </div>
+                        <div class="split-members" id="nsMembersList"></div>
+                        <div class="split-preview">
+                            <div class="split-preview-title">Vista previa</div>
+                            <div class="split-preview-meta" id="nsPreviewMeta">-</div>
+                            <div class="split-preview-list" id="nsPreviewList"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -180,7 +137,7 @@
             <div class="page-header">
                 <div>
                     <div class="page-title"><div class="page-title-dot"></div>Balances</div>
-                    <div class="page-sub">Balance acumulado por miembro según actividades</div>
+                    <div class="page-sub">Balance acumulado por miembro</div>
                 </div>
             </div>
 
@@ -189,62 +146,45 @@
                     <div class="panel-hdr-title">💰 Balance por Miembro</div>
                 </div>
 
-                <div id="balanceList"></div>
+                <table class="activities-table" id="historyTable">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th style="text-align:right;">Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody"></tbody>
+                </table>
             </div>
         </div>
 
-
-        <!-- ── ZVZ VIEW ──────────────────────────────────────── -->
-        <div class="view" id="view-zvz">
-            <div class="page-header">
-                <div>
-                    <div class="page-title"><div class="page-title-dot"></div>Composición ZvZ</div>
-                    <div class="page-sub">Organiza los roles para la batalla campal</div>
-                </div>
-                <div style="display:flex;gap:8px;align-items:center;">
-                    <button class="btn-sm btn-ghost" id="zvzClearBtn" type="button">🗑️ Limpiar Todo</button>
-                    <button class="btn-sm zvz-btn-primary" id="zvzNewRoleBtn" type="button">＋ Nuevo Rol</button>
-                </div>
-            </div>
-            <div class="zvz-grid" id="zvzGrid"></div>
-        </div>
-
-        <!-- ZVZ MODAL ROL -->
-        <div class="modal-overlay" id="zvzModalRole">
-            <div class="modal" style="max-width:420px;">
-                <div class="modal-header">
-                    <div class="modal-title" id="zvzModalTitle">Nuevo Rol</div>
-                    <button class="modal-close" id="zvzModalClose" type="button">&times;</button>
-                </div>
-                <div class="modal-body" style="padding:20px;">
-                    <div style="margin-bottom:14px;"><label class="form-lbl">Nombre del Rol</label><input class="form-input" id="zvzInputName" placeholder="ej: Santificador, Tanque..." maxlength="40"></div>
-                    <div style="margin-bottom:14px;"><label class="form-lbl">Cantidad Máxima</label><input class="form-input" id="zvzInputMax" type="number" min="1" max="50" placeholder="ej: 5"></div>
-                    <div style="margin-bottom:6px;"><label class="form-lbl">Color</label><div class="zvz-color-grid" id="zvzColorGrid"></div><div style="display:flex;align-items:center;gap:10px;margin-top:8px;"><div id="zvzColorPreview" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border2);cursor:pointer;flex-shrink:0;" onclick="document.getElementById('zvzColorNative').click()"></div><span style="font-size:11px;color:var(--text2);cursor:pointer;" onclick="document.getElementById('zvzColorNative').click()">🎨 Selector completo</span><input type="color" id="zvzColorNative" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;"></div></div>
-                    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;"><button class="btn-sm btn-ghost" id="zvzModalCancel" type="button">Cancelar</button><button class="btn-sm zvz-btn-primary" id="zvzModalSave" type="button">Crear Rol</button></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ZVZ MODAL MIEMBRO -->
-        <div class="modal-overlay" id="zvzModalMember">
-            <div class="modal" style="max-width:380px;">
-                <div class="modal-header">
-                    <div class="modal-title">Agregar &mdash; <span id="zvzMemberRoleName" style="color:var(--gold);"></span></div>
-                    <button class="modal-close" id="zvzMemberClose" type="button">&times;</button>
-                </div>
-                <div class="modal-body" style="padding:16px;"><input class="form-input" id="zvzMemberSearch" placeholder="🔍 Buscar miembro..." style="margin-bottom:10px;"><div id="zvzMemberList" style="max-height:220px;overflow-y:auto;border:1px solid var(--border2);border-radius:8px;background:var(--bg4);"></div></div>
-            </div>
-        </div>
         <div class="view" id="view-members">
             <div class="page-header">
                 <div>
                     <div class="page-title"><div class="page-title-dot"></div>Miembros</div>
-                    <div class="page-sub">Miembros activos del gremio</div>
+                    <div class="page-sub" id="membersPageSub">Roles y asistencia semanal (Lun–Vie)</div>
                 </div>
             </div>
             <div class="panel">
                 <div class="panel-hdr"><div class="panel-hdr-title">👥 Miembros</div></div>
-                <div class="members-grid" id="membersGrid"></div>
+                <div class="members-table-wrap">
+                    <table class="members-table" id="membersTable">
+                        <thead>
+                            <tr>
+                                <th class="col-num">#</th>
+                                <th class="col-player">Jugador</th>
+                                <th class="col-role">Rol Principal</th>
+                                <th class="col-role">Rol Secundario</th>
+                                <th class="col-day col-day-mon">Lun</th>
+                                <th class="col-day col-day-tue">Mar</th>
+                                <th class="col-day col-day-wed">Mié</th>
+                                <th class="col-day col-day-thu">Jue</th>
+                                <th class="col-day col-day-fri">Vie</th>
+                            </tr>
+                        </thead>
+                        <tbody id="membersTableBody"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -252,279 +192,93 @@
             <div class="page-header">
                 <div>
                     <div class="page-title"><div class="page-title-dot"></div>Auditoría</div>
-                    <div class="page-sub" id="auditWeekLabel">Semana actual</div>
+                    <div class="page-sub">Para ver historial, usa el modal → Acción: Auditar</div>
                 </div>
             </div>
-
-            <div class="audit-cards">
-                <div class="panel audit-card">
-                    <div class="audit-card-inner">
-                        <div class="audit-card-label">Depositado esta semana</div>
-                        <div class="audit-card-value" style="color:var(--green);" id="auditCardDeposited">—</div>
-                    </div>
-                </div>
-                <div class="panel audit-card">
-                    <div class="audit-card-inner">
-                        <div class="audit-card-label">Total ganado gremio</div>
-                        <div class="audit-card-value" style="color:var(--gold);" id="auditCardEarned">—</div>
-                    </div>
-                </div>
-                <div class="panel audit-card">
-                    <div class="audit-card-inner">
-                        <div class="audit-card-label">Actividades</div>
-                        <div class="audit-card-value" style="color:var(--white);" id="auditCardActivities">—</div>
-                    </div>
-                </div>
-            </div>
-
             <div class="panel">
-                <div class="panel-hdr">
-                    <div class="panel-hdr-title">👥 Participación por Miembro</div>
-                    <span class="badge badge-pending" id="auditMemberCount">—</span>
-                </div>
-                <div id="auditMemberList">
-                    <div style="padding:36px 18px;color:var(--text2);text-align:center;">Cargando...</div>
-                </div>
-            </div>
-        </div>
-        <!-- ── ADMINISTRACIÓN VIEW (gestor de deudas del gremio) ── -->
-        <div class="view" id="view-admin">
-            <div class="page-header">
-                <div>
-                    <div class="page-title"><div class="page-title-dot"></div>Administración</div>
-                    <div class="page-sub">Gestor de deudas del gremio · equipo, pagos y mantenimiento</div>
-                </div>
-            </div>
-
-            <div id="adminGate" style="padding:36px 18px;color:var(--text2);text-align:center;">Verificando permisos...</div>
-
-            <div id="adminContent" style="display:none;">
-                <!-- MÉTRICAS -->
-                <div class="panel admin-panel">
-                    <div class="admin-metrics">
-                        <div class="admin-mc">
-                            <div class="admin-mc-lbl">Deuda total</div>
-                            <div class="admin-mc-val" id="adm-mTotal" style="color:var(--red);">0 🪙</div>
-                        </div>
-                        <div class="admin-mc">
-                            <div class="admin-mc-lbl">Equipo</div>
-                            <div class="admin-mc-val" id="adm-mEquipo" style="color:var(--blue);">0 🪙</div>
-                        </div>
-                        <div class="admin-mc">
-                            <div class="admin-mc-lbl">Pagos</div>
-                            <div class="admin-mc-val" id="adm-mPago" style="color:var(--orange);">0 🪙</div>
-                        </div>
-                        <div class="admin-mc">
-                            <div class="admin-mc-lbl">Mantenimiento</div>
-                            <div class="admin-mc-val" id="adm-mMant" style="color:var(--green);">0 🪙</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- AGREGAR DEUDA -->
-                <div class="panel admin-panel">
-                    <div class="panel-hdr">
-                        <div class="panel-hdr-title">✦ Registrar deuda</div>
-                    </div>
-                    <div class="admin-add-form">
-                        <div class="admin-fgrp">
-                            <span class="admin-flbl">Miembro</span>
-                            <input class="admin-finp" id="adm-name" placeholder="Nombre del miembro" list="adm-members-list">
-                            <datalist id="adm-members-list"></datalist>
-                        </div>
-                        <div class="admin-fgrp">
-                            <span class="admin-flbl">Descripción</span>
-                            <input class="admin-finp" id="adm-desc" placeholder="ej: Espada tier 8">
-                        </div>
-                        <div class="admin-fgrp">
-                            <span class="admin-flbl">Categoría</span>
-                            <select class="admin-finp" id="adm-cat">
-                                <option value="equipo">⚔️ Equipo</option>
-                                <option value="pago">💸 Pago</option>
-                                <option value="mant">🔧 Mantenimiento</option>
-                            </select>
-                        </div>
-                        <div class="admin-fgrp">
-                            <span class="admin-flbl">Monto 🪙</span>
-                            <input class="admin-finp" id="adm-amt" type="text" inputmode="numeric" placeholder="500000 o 500k">
-                        </div>
-                        <div class="admin-fgrp" style="justify-content:flex-end;">
-                            <button class="btn btn-gold" id="adm-addBtn" type="button">✦ Agregar</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- FILTROS + LISTA -->
-                <div class="panel admin-panel">
-                    <div class="panel-hdr">
-                        <div class="panel-hdr-title">📋 Deudas activas</div>
-                        <span class="badge badge-pending" id="adm-countBadge">0 registros</span>
-                    </div>
-                    <div class="admin-cat-tags">
-                        <button type="button" class="admin-cat-tag all active" data-filter="all">
-                            <span class="admin-cat-dot" style="background:var(--gold);"></span>Todas
-                        </button>
-                        <button type="button" class="admin-cat-tag equipo" data-filter="equipo">
-                            <span class="admin-cat-dot" style="background:var(--blue);"></span>Equipo
-                        </button>
-                        <button type="button" class="admin-cat-tag pago" data-filter="pago">
-                            <span class="admin-cat-dot" style="background:var(--orange);"></span>Pagos
-                        </button>
-                        <button type="button" class="admin-cat-tag mant" data-filter="mant">
-                            <span class="admin-cat-dot" style="background:var(--green);"></span>Mantenimiento
-                        </button>
-                        <button type="button" class="admin-cat-tag paid" data-filter="paid">
-                            <span class="admin-cat-dot" style="background:var(--green);"></span>Pagadas
-                        </button>
-                    </div>
-                    <div class="admin-debt-list" id="adm-debtList">
-                        <div class="admin-empty">Sin deudas registradas. Agrega la primera arriba.</div>
-                    </div>
-                </div>
-
-                <!-- GRÁFICAS -->
-                <div class="panel admin-panel">
-                    <div class="panel-hdr">
-                        <div class="panel-hdr-title">📊 Distribución visual</div>
-                    </div>
-                    <div class="admin-chart-section">
-                        <div class="admin-chart-box">
-                            <div class="admin-chart-lbl">Por categoría</div>
-                            <div class="admin-legend">
-                                <span class="admin-leg-item"><span class="admin-leg-dot" style="background:#3a7bd4;"></span>Equipo</span>
-                                <span class="admin-leg-item"><span class="admin-leg-dot" style="background:#e8922a;"></span>Pagos</span>
-                                <span class="admin-leg-item"><span class="admin-leg-dot" style="background:#2ecc71;"></span>Mant.</span>
-                            </div>
-                            <div class="admin-chart-wrap" style="height:200px;">
-                                <canvas id="adm-catChart" role="img" aria-label="Deudas por categoría"></canvas>
-                            </div>
-                        </div>
-                        <div class="admin-chart-box">
-                            <div class="admin-chart-lbl">Por miembro</div>
-                            <div class="admin-chart-wrap" id="adm-memberChartWrap" style="height:220px;">
-                                <canvas id="adm-memberChart" role="img" aria-label="Deudas por miembro"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ── ACTIVIDAD VIEW ─────────────────────────────── -->
-        <div class="view" id="view-actividad">
-            <div class="page-header">
-                <div>
-                    <div class="page-title"><div class="page-title-dot"></div>Actividad</div>
-                    <div class="page-sub">Ranking de participación del servidor</div>
-                </div>
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <button class="btn-sm act-btn-mod" id="act-openGenBtn" type="button" style="display:none;">
-                        🔧 Generar Código
-                    </button>
-                    <button class="btn-sm act-btn-admin" id="act-openAdminBtn" type="button" style="display:none;">
-                        ⚠️ Reset Puntos
-                    </button>
-                </div>
-            </div>
-
-            <!-- Barra activar código -->
-            <div class="act-activate-bar">
-                <span class="act-bar-label">⚡ Activar código</span>
-                <input class="act-code-input" id="act-codeInput" maxlength="4" inputmode="numeric" placeholder="0000" autocomplete="off">
-                <button class="btn btn-gold" id="act-redeemBtn" type="button" style="width:auto;padding:9px 22px;font-size:12px;">Activar</button>
-                <div class="act-feedback" id="act-redeemFb"></div>
-            </div>
-
-            <!-- Leaderboard -->
-            <div class="panel">
-                <div class="panel-hdr">
-                    <div class="panel-hdr-title">🏆 Ranking de Actividad</div>
-                    <div style="display:flex;align-items:center;gap:10px;">
-                        <span style="font-size:11px;color:var(--text2);" id="act-hdrStats"></span>
-                        <span class="badge badge-pending" style="background:rgba(200,168,75,.1);color:var(--gold);border-color:rgba(200,168,75,.2);">TOP 10</span>
-                    </div>
-                </div>
-                <div id="act-leaderboard">
-                    <div style="padding:40px;text-align:center;color:var(--text2);">
-                        <div style="font-size:32px;opacity:.3;margin-bottom:8px;">📊</div>
-                        <div style="font-family:'Cinzel',serif;font-size:13px;">Sin datos aún</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Mis puntos strip -->
-            <div class="act-my-strip">
-                <div>
-                    <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text2);margin-bottom:4px;">Tus Puntos</div>
-                    <div class="act-my-val" id="act-myPts">0 <span>pts</span></div>
-                </div>
-                <div class="act-strip-div"></div>
-                <div style="font-size:12px;color:var(--text2);" id="act-myRank">Activa tu primer código para aparecer en el ranking</div>
-            </div>
-        </div>
-
-        <!-- MODAL: Generar Código (Mod) -->
-        <div class="modal-overlay" id="act-genOverlay">
-            <div class="modal" style="max-width:460px;">
-                <div class="modal-header" style="background:rgba(200,168,75,.04);border-bottom-color:rgba(200,168,75,.15);">
-                    <div class="modal-title" style="color:var(--gold);">🔧 Generar Código de Actividad</div>
-                    <button class="modal-close" id="act-genClose" type="button">&times;</button>
-                </div>
-                <div class="modal-body" style="padding:20px;display:flex;flex-direction:column;gap:14px;">
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                        <div>
-                            <label class="form-lbl">Usos disponibles</label>
-                            <input class="form-input" type="number" id="act-genUsos" min="1" max="999" value="20" style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;text-align:center;">
-                        </div>
-                        <div>
-                            <label class="form-lbl">Puntos por uso</label>
-                            <input class="form-input" type="number" id="act-genPuntos" min="1" max="9999" value="10" style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;text-align:center;">
-                        </div>
-                    </div>
-                    <button class="btn btn-gold" id="act-generateBtn" type="button">✦ Generar Código</button>
-
-                    <!-- Código generado -->
-                    <div class="act-gen-display" id="act-codeDisplay">
-                        <div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--text2);">Código Activo — Comparte con el servidor</div>
-                        <div class="act-gen-num" id="act-codeNum">—</div>
-                        <div class="act-gen-timer" id="act-codeTimer">5:00</div>
-                        <div style="font-size:11px;color:var(--text2);" id="act-codeMeta"></div>
-                        <button class="btn-sm btn-ghost" id="act-copyBtn" type="button" style="margin-top:4px;">📋 Copiar código</button>
-                    </div>
-
-                    <!-- Activos -->
-                    <div>
-                        <label class="form-lbl" style="margin-bottom:7px;">Códigos Activos Ahora</label>
-                        <div id="act-activeList">
-                            <div style="font-size:12px;color:var(--text2);text-align:center;padding:10px;border:1px dashed var(--border);border-radius:7px;">Sin códigos activos</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- MODAL: Reset Puntos (Admin) -->
-        <div class="modal-overlay" id="act-adminOverlay">
-            <div class="modal" style="max-width:380px;">
-                <div class="modal-header" style="background:rgba(224,82,82,.04);border-bottom-color:rgba(224,82,82,.15);">
-                    <div class="modal-title" style="color:var(--red);">⚠️ Reiniciar Puntos</div>
-                    <button class="modal-close" id="act-adminClose" type="button">&times;</button>
-                </div>
-                <div class="modal-body" style="padding:20px;display:flex;flex-direction:column;gap:12px;">
-                    <div style="font-size:13px;color:var(--text2);line-height:1.6;">Esta acción <strong style="color:var(--white);">eliminará los puntos de todos los usuarios</strong>. Es irreversible.</div>
-                    <div>
-                        <label class="form-lbl">Contraseña de administrador</label>
-                        <input type="password" class="form-input" id="act-resetPw" placeholder="Contraseña...">
-                    </div>
-                    <div style="display:flex;gap:9px;">
-                        <button type="button" id="act-adminCancel" class="btn-sm btn-ghost" style="flex:1;justify-content:center;padding:10px;">Cancelar</button>
-                        <button type="button" id="act-adminConfirm" style="flex:1;padding:10px;border-radius:7px;border:none;background:var(--red);color:#fff;cursor:pointer;font-family:'Exo 2',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Confirmar Reset</button>
-                    </div>
+                <div class="panel-hdr"><div class="panel-hdr-title">📋 Historial</div></div>
+                <div style="padding:36px 18px;color:var(--text2);text-align:center;">
+                    La auditoría se consulta desde el modal para un usuario específico.
                 </div>
             </div>
         </div>
     </main>
 
-    <script src="script.js?v=20"></script>
+    <div class="modal-overlay" id="modModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Control de balance</div>
+                <button class="modal-close" id="modCloseBtn" type="button">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-grid">
+                    <div class="modal-field">
+                        <label for="modAction">Acción</label>
+                        <select id="modAction">
+                            <option value="audit">Auditar (ver historial)</option>
+                            <option value="load">Cargar balance (+)</option>
+                            <option value="pay">Pagar (-)</option>
+                            <option value="set">Establecer balance</option>
+                            <option value="autosplit">Auto split</option>
+                        </select>
+                    </div>
+                    <div class="modal-field">
+                        <label for="memberFilter">Filtro</label>
+                        <select id="memberFilter">
+                            <option value="role">Rol > everyone</option>
+                            <option value="voice">En canal de voz</option>
+                        </select>
+                    </div>
+                    <div class="modal-field" id="voiceChannelField" style="grid-column: 1 / -1; display:none;">
+                        <label for="voiceChannelSelect">Canal de voz</label>
+                        <select id="voiceChannelSelect"></select>
+                    </div>
+                    <div class="modal-field" id="announceChannelField" style="grid-column: 1 / -1; display:none;">
+                        <label for="announceChannelSelect">Canal para enviar mensaje</label>
+                        <select id="announceChannelSelect"></select>
+                    </div>
+                    <div class="modal-field" style="grid-column: 1 / -1;">
+                        <label for="memberSelect">Usuario</label>
+                        <div class="member-checkbox-list" id="memberCheckboxList"></div>
+                        <select id="memberSelect" style="display:none;"></select>
+                    </div>
+                    <div class="modal-field" id="amountField" style="grid-column: 1 / -1;">
+                        <label for="modAmount">Monto</label>
+                        <input id="modAmount" type="number" step="1" autocomplete="off" placeholder="0">
+                    </div>
+                    <div class="modal-field" id="splitTotalField" style="grid-column: 1 / -1; display:none;">
+                        <label for="splitTotal">Monto total a repartir</label>
+                        <input id="splitTotal" type="number" step="1" autocomplete="off" placeholder="0">
+                    </div>
+                    <div class="modal-field" id="splitRepairField" style="grid-column: 1 / -1; display:none;">
+                        <label for="splitRepair">Costo de reparación</label>
+                        <input id="splitRepair" type="number" step="1" autocomplete="off" placeholder="0">
+                    </div>
+                    <div class="modal-field" id="splitPercentField" style="grid-column: 1 / -1; display:none;">
+                        <label for="splitPercent">Porcentaje (%)</label>
+                        <input id="splitPercent" type="number" step="0.01" autocomplete="off" placeholder="0">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="login-btn" id="modApplyBtn" type="button">Aplicar</button>
+                </div>
+                <div class="mod-success" id="modSuccess" style="display:none;">✓</div>
+                <div class="modal-hint" id="modHint" style="display:none;"></div>
+                <table class="activities-table" id="auditTable" style="display:none; margin-top: 14px;">
+                    <thead>
+                        <tr>
+                            <th>Admin</th>
+                            <th>Fecha</th>
+                            <th>Tipo</th>
+                            <th>Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auditTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js?v=11"></script>
 </body>
 </html>
