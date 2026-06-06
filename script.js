@@ -70,9 +70,20 @@ const navItems = Array.from(document.querySelectorAll('.nav-item[data-view]'));
 
 let lastVoiceMembers = [];
 
-const API_BASE_URL = 'https://royalvoidlootsplit.discloud.app';
+const API_BASE_URL = (window.location.protocol === 'http:' || window.location.protocol === 'https:')
+    ? ''
+    : 'https://royalvoidlootsplit.discloud.app';
 
 const SID_STORAGE_KEY = 'lootsplit_sid';
+
+function escapeHtml(str) {
+    return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 
 function getSid() {
     return localStorage.getItem(SID_STORAGE_KEY) || '';
@@ -137,15 +148,16 @@ async function saveMemberRosterUpdate(payload) {
 
 function renderMembersTable(members, weekKey, canManage) {
     if (!membersTableBody) return;
-    membersRosterWeek = weekKey;
-    membersTableBody.innerHTML = '';
+    try {
+        membersRosterWeek = weekKey;
+        membersTableBody.innerHTML = '';
 
-    if (!members.length) {
-        membersTableBody.innerHTML = '<tr><td colspan="9" class="members-empty">Sin miembros para mostrar.</td></tr>';
-        return;
-    }
+        if (!members.length) {
+            membersTableBody.innerHTML = '<tr><td colspan="9" class="members-empty">Sin miembros para mostrar.</td></tr>';
+            return;
+        }
 
-    members.forEach((m, index) => {
+        members.forEach((m, index) => {
         const userId = String(m.user_id || m.id || '');
         const name = String(m.name || userId || '').trim();
         const primaryRole = String(m.primary_role || '');
@@ -228,6 +240,10 @@ function renderMembersTable(members, weekKey, canManage) {
             ? 'Roles y asistencia semanal (Lun–Vie) — edición de mods'
             : 'Roles y asistencia semanal (Lun–Vie) — solo lectura';
     }
+    } catch (renderErr) {
+        console.error('renderMembersTable error:', renderErr);
+        membersTableBody.innerHTML = '<tr><td colspan="9" class="members-empty">Error al mostrar miembros.</td></tr>';
+    }
 }
 
 async function loadMembersView() {
@@ -237,25 +253,41 @@ async function loadMembersView() {
         return;
     }
     membersTableBody.innerHTML = '<tr><td colspan="9" class="members-empty">Cargando...</td></tr>';
+
+    const weekKey = getIsoWeekKey();
+
     try {
-        const weekKey = getIsoWeekKey();
-        const qs = new URLSearchParams({ guild_id: selectedGuildId, week: weekKey });
-        const rosterRes = await apiFetch(`/api/members/roster?${qs.toString()}`, { method: 'GET' });
-        if (rosterRes.ok) {
-            const data = await rosterRes.json().catch(() => ({}));
-            const members = Array.isArray(data.members) ? data.members : [];
-            renderMembersTable(members, String(data.week || weekKey), !!data.can_manage);
-            return;
+        let usedRoster = false;
+        try {
+            const qs = new URLSearchParams({ guild_id: selectedGuildId, week: weekKey });
+            const rosterRes = await apiFetch(`/api/members/roster?${qs.toString()}`, { method: 'GET' });
+            if (rosterRes.ok) {
+                const data = await rosterRes.json().catch(() => ({}));
+                if (data && data.success !== false) {
+                    const members = Array.isArray(data.members) ? data.members : [];
+                    renderMembersTable(members, String(data.week || weekKey), !!data.can_manage);
+                    usedRoster = true;
+                }
+            }
+        } catch (rosterErr) {
+            console.warn('Roster API no disponible, usando fallback:', rosterErr);
         }
+        if (usedRoster) return;
 
         const [mRes, modRes] = await Promise.all([
             apiFetch(`/api/members?${new URLSearchParams({ guild_id: selectedGuildId, filter: 'role' }).toString()}`, { method: 'GET' }),
             apiFetch(`/api/admin/can_manage?guild_id=${encodeURIComponent(selectedGuildId)}`, { method: 'GET' }),
         ]);
+
+        if (mRes.status === 401) {
+            membersTableBody.innerHTML = '<tr><td colspan="9" class="members-empty">Sesión expirada. Vuelve a iniciar sesión.</td></tr>';
+            return;
+        }
         if (!mRes.ok) {
             membersTableBody.innerHTML = '<tr><td colspan="9" class="members-empty">No se pudo cargar miembros.</td></tr>';
             return;
         }
+
         const mData = await mRes.json().catch(() => ({}));
         const raw = Array.isArray(mData.members) ? mData.members : [];
         let canManage = false;
@@ -272,8 +304,8 @@ async function loadMembersView() {
         }));
         renderMembersTable(members, weekKey, canManage);
     } catch (e) {
-        console.error(e);
-        membersTableBody.innerHTML = '<tr><td colspan="9" class="members-empty">Error cargando miembros.</td></tr>';
+        console.error('loadMembersView error:', e);
+        membersTableBody.innerHTML = '<tr><td colspan="9" class="members-empty">Error de conexión. Recarga la página.</td></tr>';
     }
 }
 
@@ -1626,15 +1658,6 @@ async function refreshLeaderboard(guildId) {
 function formatAmount(n) {
     const num = Number(n || 0);
     return num.toLocaleString('en-US');
-}
-
-function escapeHtml(str) {
-    return String(str)
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
 }
 
 // Show notification

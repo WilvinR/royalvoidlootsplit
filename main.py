@@ -1217,22 +1217,26 @@ async def api_members_roster_handler(request: web.Request) -> web.StreamResponse
             cur = conn.cursor()
             if user_ids:
                 placeholders = ",".join("?" * len(user_ids))
-                cur.execute(
-                    f"SELECT user_id, primary_role, secondary_role FROM member_roles WHERE guild_id = ? AND user_id IN ({placeholders})",
-                    [gid, *user_ids],
-                )
-                for row in cur.fetchall():
-                    roles_map[int(row["user_id"])] = {
-                        "primary_role": str(row["primary_role"] or ""),
-                        "secondary_role": str(row["secondary_role"] or ""),
-                    }
-                cur.execute(
-                    f"SELECT user_id, day, mark FROM member_attendance WHERE guild_id = ? AND week = ? AND user_id IN ({placeholders})",
-                    [gid, week, *user_ids],
-                )
-                for row in cur.fetchall():
-                    uid = int(row["user_id"])
-                    att_map.setdefault(uid, {})[str(row["day"])] = str(row["mark"] or "")
+                try:
+                    cur.execute(
+                        f"SELECT user_id, primary_role, secondary_role FROM member_roles WHERE guild_id = ? AND user_id IN ({placeholders})",
+                        [gid, *user_ids],
+                    )
+                    for row in cur.fetchall():
+                        roles_map[int(row["user_id"])] = {
+                            "primary_role": str(row["primary_role"] or ""),
+                            "secondary_role": str(row["secondary_role"] or ""),
+                        }
+                    cur.execute(
+                        f"SELECT user_id, day, mark FROM member_attendance WHERE guild_id = ? AND week = ? AND user_id IN ({placeholders})",
+                        [gid, week, *user_ids],
+                    )
+                    for row in cur.fetchall():
+                        uid = int(row["user_id"])
+                        att_map.setdefault(uid, {})[str(row["day"])] = str(row["mark"] or "")
+                except sqlite3.OperationalError as db_err:
+                    print(f"[roster] DB tables missing or error, returning members without roster data: {db_err}")
+                    _db_init()
         finally:
             conn.close()
 
