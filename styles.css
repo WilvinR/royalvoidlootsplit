@@ -1511,8 +1511,7 @@ body::after {
     margin-bottom: 6px;
 }
 
-.split-field input,
-.split-field select {
+.split-field input {
     width: 100%;
     padding: 10px 12px;
     border-radius: 10px;
@@ -1520,6 +1519,135 @@ body::after {
     background: rgba(255,255,255,0.06);
     color: rgba(255,255,255,0.92);
     outline: none;
+}
+
+/* Custom pickers (evitan select nativo con emojis gigantes) */
+.picker {
+    position: relative;
+}
+
+.picker-trigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.92);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.picker-trigger:hover,
+.picker-trigger.is-open {
+    border-color: rgba(200,168,75,0.35);
+    background: rgba(255,255,255,0.08);
+}
+
+.picker-prefix {
+    flex-shrink: 0;
+    width: 22px;
+    text-align: center;
+    color: var(--text2);
+    font-weight: 700;
+}
+
+.picker-value {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.picker-value.is-placeholder {
+    color: var(--text2);
+    font-weight: 500;
+}
+
+.picker-arrow {
+    flex-shrink: 0;
+    color: var(--text2);
+    font-size: 11px;
+    transition: transform 0.15s;
+}
+
+.picker-trigger.is-open .picker-arrow {
+    transform: rotate(180deg);
+}
+
+.picker-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 40;
+    max-height: 240px;
+    overflow-y: auto;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.14);
+    background: var(--bg3, #1a1a24);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+    padding: 6px;
+}
+
+.picker-panel[hidden] {
+    display: none;
+}
+
+.picker-option {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: rgba(255,255,255,0.92);
+    font-size: 13px;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.12s;
+}
+
+.picker-option:hover {
+    background: rgba(200,168,75,0.10);
+}
+
+.picker-option-prefix {
+    flex-shrink: 0;
+    width: 22px;
+    text-align: center;
+    opacity: 0.75;
+}
+
+.picker-option-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.picker-empty {
+    padding: 12px 10px;
+    font-size: 12px;
+    color: var(--text2);
+    text-align: center;
+}
+
+#view-new-split .panel,
+#view-new-split .split-body,
+#view-new-split .split-field,
+#view-new-split .picker {
+    overflow: visible;
 }
 
 .split-actions {
@@ -1540,71 +1668,183 @@ body::after {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
 .split-members-toolbar label {
     font-size: 12px;
     color: var(--text2);
-    font-weight: 500;
+    font-weight: 600;
+    letter-spacing: 0.02em;
 }
 
-.split-members-toolbar select {
-    width: 100%;
-    background: var(--bg2);
-    border: 1px solid var(--border);
+.split-members-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.split-members-search {
+    flex: 1;
+    min-width: 140px;
+    padding: 8px 12px;
     border-radius: 8px;
-    color: var(--white);
-    padding: 8px 10px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.92);
     font-size: 13px;
     font-family: inherit;
+    outline: none;
 }
 
-.split-members {
+.split-members-search:focus {
+    border-color: rgba(200,168,75,0.35);
+}
+
+.split-members-search::placeholder {
+    color: var(--text3, rgba(255,255,255,0.35));
+}
+
+.split-members-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.split-mini-btn {
+    padding: 7px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.04);
+    color: var(--text2);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.split-mini-btn:hover {
+    background: rgba(200,168,75,0.10);
+    border-color: rgba(200,168,75,0.25);
+    color: var(--white);
+}
+
+.split-members-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    max-height: 360px;
-    overflow: auto;
-    padding-right: 4px;
+    max-height: 280px;
+    overflow-y: auto;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.10);
+    background: rgba(0,0,0,0.18);
 }
 
-.split-member-guild .split-member-name {
-    color: var(--gold-dim);
+.split-members-list::-webkit-scrollbar {
+    width: 5px;
 }
 
-.split-member {
+.split-members-list::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.15);
+    border-radius: 4px;
+}
+
+.split-members-loading {
+    padding: 18px 14px;
+    font-size: 13px;
+    color: var(--text2);
+    text-align: center;
+}
+
+.member-item {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 10px 10px;
-    border-radius: 10px;
-    border: 1px solid rgba(255,255,255,0.10);
-    background: rgba(255,255,255,0.04);
+    padding: 9px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    cursor: pointer;
+    transition: background 0.12s;
+    user-select: none;
 }
 
-.split-member input[type="checkbox"] {
+.member-item:last-child {
+    border-bottom: none;
+}
+
+.member-item:hover {
+    background: rgba(200,168,75,0.05);
+}
+
+.member-item.checked {
+    background: rgba(200,168,75,0.08);
+}
+
+.m-check {
     width: 16px;
     height: 16px;
-}
-
-.split-member-name {
-    flex: 1;
-    font-size: 13px;
-    font-weight: 700;
-    color: rgba(255,255,255,0.92);
-}
-
-.split-member-tag {
+    flex-shrink: 0;
+    border: 1.5px solid rgba(255,255,255,0.22);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 10px;
     font-weight: 800;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--gold-dim);
-    border: 1px solid rgba(200,168,75,0.25);
-    padding: 2px 8px;
-    border-radius: 20px;
-    background: rgba(200,168,75,0.06);
+    color: var(--bg, #0f0f14);
+    transition: all 0.12s;
+}
+
+.member-item.checked .m-check {
+    background: var(--gold, #c8a84b);
+    border-color: var(--gold, #c8a84b);
+}
+
+.m-ava {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.10);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text2);
+    flex-shrink: 0;
+}
+
+.m-ava.guild-ava {
+    background: rgba(200,168,75,0.10);
+    border-color: rgba(200,168,75,0.25);
+    font-size: 14px;
+}
+
+.m-name {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.92);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.m-sub {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text2);
+}
+
+.guild-row {
+    background: rgba(200,168,75,0.05);
+}
+
+.guild-row .m-name {
+    color: var(--gold-dim, #c8a84b);
 }
 
 .split-preview {

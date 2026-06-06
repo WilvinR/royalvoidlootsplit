@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RoyalVoid Loot split</title>
-    <link rel="stylesheet" href="styles.css?v=11">
+    <link rel="stylesheet" href="styles.css?v=12">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Exo+2:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -101,8 +101,16 @@
                             <input id="nsTotal" type="text" autocomplete="off" placeholder="5000000 o 5m" />
                         </div>
                         <div class="split-field">
-                            <label for="nsChannelSelect">Canal para notificar</label>
-                            <select id="nsChannelSelect"></select>
+                            <label for="nsChannelTrigger">Canal para notificar</label>
+                            <div class="picker" id="nsChannelPicker">
+                                <button type="button" class="picker-trigger" id="nsChannelTrigger" aria-haspopup="listbox" aria-expanded="false">
+                                    <span class="picker-prefix">#</span>
+                                    <span class="picker-value" id="nsChannelLabel">Selecciona un canal</span>
+                                    <span class="picker-arrow" aria-hidden="true">▾</span>
+                                </button>
+                                <div class="picker-panel" id="nsChannelPanel" role="listbox" hidden></div>
+                            </div>
+                            <select id="nsChannelSelect" hidden tabindex="-1" aria-hidden="true"></select>
                         </div>
                         <div class="split-actions">
                             <button class="login-btn" id="nsCreateBtn" type="button">Crear Loot Split</button>
@@ -117,12 +125,25 @@
                     </div>
                     <div class="split-body">
                         <div class="split-members-toolbar">
-                            <label for="nsVoiceSelect">Canal de voz</label>
-                            <select id="nsVoiceSelect">
-                                <option value="">Auto-seleccionar miembros conectados…</option>
-                            </select>
+                            <label for="nsVoiceTrigger">Canal de voz</label>
+                            <div class="picker picker-voice" id="nsVoicePicker">
+                                <button type="button" class="picker-trigger" id="nsVoiceTrigger" aria-haspopup="listbox" aria-expanded="false">
+                                    <span class="picker-prefix">🔊</span>
+                                    <span class="picker-value" id="nsVoiceLabel">Auto-seleccionar miembros conectados…</span>
+                                    <span class="picker-arrow" aria-hidden="true">▾</span>
+                                </button>
+                                <div class="picker-panel" id="nsVoicePanel" role="listbox" hidden></div>
+                            </div>
+                            <select id="nsVoiceSelect" hidden tabindex="-1" aria-hidden="true"></select>
                         </div>
-                        <div class="split-members" id="nsMembersList"></div>
+                        <div class="split-members-head">
+                            <input type="search" class="split-members-search" id="nsMemberSearch" placeholder="Buscar miembro…" autocomplete="off" />
+                            <div class="split-members-actions">
+                                <button type="button" class="split-mini-btn" id="nsSelectAllBtn">Marcar todos</button>
+                                <button type="button" class="split-mini-btn" id="nsClearAllBtn">Limpiar</button>
+                            </div>
+                        </div>
+                        <div class="split-members-list" id="nsMembersList"></div>
                         <div class="split-preview">
                             <div class="split-preview-title">Vista previa</div>
                             <div class="split-preview-meta" id="nsPreviewMeta">-</div>
@@ -279,6 +300,6 @@
         </div>
     </div>
 
-    <script src="script.js?v=11"></script>
+    <script src="script.js?v=12"></script>
 </body>
 </html>

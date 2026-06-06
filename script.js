@@ -51,6 +51,15 @@ const nsChannelSelect = document.getElementById('nsChannelSelect');
 const nsCreateBtn = document.getElementById('nsCreateBtn');
 const nsHint = document.getElementById('nsHint');
 const nsVoiceSelect = document.getElementById('nsVoiceSelect');
+const nsVoiceTrigger = document.getElementById('nsVoiceTrigger');
+const nsVoicePanel = document.getElementById('nsVoicePanel');
+const nsVoiceLabel = document.getElementById('nsVoiceLabel');
+const nsChannelTrigger = document.getElementById('nsChannelTrigger');
+const nsChannelPanel = document.getElementById('nsChannelPanel');
+const nsChannelLabel = document.getElementById('nsChannelLabel');
+const nsMemberSearch = document.getElementById('nsMemberSearch');
+const nsSelectAllBtn = document.getElementById('nsSelectAllBtn');
+const nsClearAllBtn = document.getElementById('nsClearAllBtn');
 const nsMembersList = document.getElementById('nsMembersList');
 const nsPreviewMeta = document.getElementById('nsPreviewMeta');
 const nsPreviewList = document.getElementById('nsPreviewList');
@@ -505,18 +514,124 @@ function _parseAmountText(raw) {
 function _selectedNewSplitParticipants() {
     if (!nsMembersList) return [];
     const out = [];
-    const boxes = Array.from(nsMembersList.querySelectorAll('input[type="checkbox"][data-user-id]'));
-    for (const cb of boxes) {
-        if (!(cb instanceof HTMLInputElement)) continue;
-        if (!cb.checked) continue;
-        const uidRaw = String(cb.getAttribute('data-user-id') || '').trim();
+    const items = Array.from(nsMembersList.querySelectorAll('.member-item.checked[data-user-id]'));
+    for (const it of items) {
+        const uidRaw = String(it.getAttribute('data-user-id') || '').trim();
         if (!uidRaw) continue;
         const uid = parseInt(uidRaw, 10);
         if (!Number.isFinite(uid)) continue;
-        const name = String(cb.getAttribute('data-user-name') || '').trim();
+        const name = String(it.getAttribute('data-user-name') || '').trim();
         out.push({ user_id: uid, name });
     }
     return out;
+}
+
+function _toggleMemberItem(itemEl) {
+    if (!itemEl || !itemEl.classList.contains('member-item')) return;
+    itemEl.classList.toggle('checked');
+    const check = itemEl.querySelector('.m-check');
+    if (check) check.textContent = itemEl.classList.contains('checked') ? '✓' : '';
+    _renderNewSplitPreview();
+}
+
+function _filterNewSplitMembers() {
+    if (!nsMembersList || !nsMemberSearch) return;
+    const q = String(nsMemberSearch.value || '').trim().toLowerCase();
+    for (const it of Array.from(nsMembersList.querySelectorAll('.member-item'))) {
+        if (it.classList.contains('guild-row')) {
+            it.style.display = q ? 'none' : '';
+            continue;
+        }
+        const name = String(it.getAttribute('data-user-name') || '').toLowerCase();
+        it.style.display = !q || name.includes(q) ? '' : 'none';
+    }
+}
+
+function _setAllMembersChecked(checked) {
+    if (!nsMembersList) return;
+    for (const it of Array.from(nsMembersList.querySelectorAll('.member-item'))) {
+        if (it.classList.contains('guild-row')) continue;
+        if (it.style.display === 'none') continue;
+        it.classList.toggle('checked', checked);
+        const check = it.querySelector('.m-check');
+        if (check) check.textContent = checked ? '✓' : '';
+    }
+    _renderNewSplitPreview();
+}
+
+function _closeAllPickers(exceptPanel) {
+    for (const panel of [nsChannelPanel, nsVoicePanel]) {
+        if (!panel || panel === exceptPanel) continue;
+        panel.hidden = true;
+    }
+    for (const btn of [nsChannelTrigger, nsVoiceTrigger]) {
+        if (!btn) continue;
+        const panel = btn === nsChannelTrigger ? nsChannelPanel : nsVoicePanel;
+        if (panel === exceptPanel) continue;
+        btn.setAttribute('aria-expanded', 'false');
+        btn.classList.remove('is-open');
+    }
+}
+
+function _bindPicker(trigger, panel, onPick) {
+    if (!trigger || !panel) return;
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const willOpen = panel.hidden;
+        _closeAllPickers(willOpen ? panel : null);
+        panel.hidden = !willOpen;
+        trigger.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        trigger.classList.toggle('is-open', willOpen);
+    });
+    panel.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const opt = e.target.closest('.picker-option');
+        if (!opt) return;
+        const value = String(opt.getAttribute('data-value') || '');
+        const label = String(opt.getAttribute('data-label') || opt.textContent || '').trim();
+        onPick(value, label, opt);
+        panel.hidden = true;
+        trigger.setAttribute('aria-expanded', 'false');
+        trigger.classList.remove('is-open');
+    });
+}
+
+function _renderPickerOptions(panel, items, { placeholder, prefix = '' }) {
+    if (!panel) return;
+    panel.innerHTML = '';
+    if (!items.length) {
+        panel.innerHTML = `<div class="picker-empty">${escapeHtml(placeholder || 'Sin opciones')}</div>`;
+        return;
+    }
+    for (const item of items) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'picker-option';
+        btn.setAttribute('data-value', String(item.id || ''));
+        btn.setAttribute('data-label', String(item.name || item.id || ''));
+        btn.innerHTML = `
+            <span class="picker-option-prefix">${escapeHtml(prefix)}</span>
+            <span class="picker-option-label">${escapeHtml(String(item.name || item.id || ''))}</span>
+        `;
+        panel.appendChild(btn);
+    }
+}
+
+function _setChannelSelection(channelId, channelName) {
+    if (nsChannelSelect) nsChannelSelect.value = channelId;
+    if (nsChannelLabel) {
+        nsChannelLabel.textContent = channelName || 'Selecciona un canal';
+        nsChannelLabel.classList.toggle('is-placeholder', !channelId);
+    }
+    _setNsHint('');
+}
+
+function _resetVoicePickerLabel() {
+    if (nsVoiceLabel) {
+        nsVoiceLabel.textContent = 'Auto-seleccionar miembros conectados…';
+        nsVoiceLabel.classList.add('is-placeholder');
+    }
+    if (nsVoiceSelect) nsVoiceSelect.value = '';
 }
 
 function _renderNewSplitPreview() {
@@ -575,17 +690,21 @@ async function nsImportFromVoiceChannel(channelId, channelName) {
             return;
         }
 
-        for (const cb of Array.from(nsMembersList.querySelectorAll('input[type="checkbox"][data-user-id]'))) {
-            if (cb instanceof HTMLInputElement) cb.checked = false;
+        for (const cb of Array.from(nsMembersList.querySelectorAll('.member-item'))) {
+            cb.classList.remove('checked');
+            const check = cb.querySelector('.m-check');
+            if (check) check.textContent = '';
         }
 
         let imported = 0;
         for (const m of members) {
             const uid = String(m.id || m.user_id || '').trim();
             if (!uid) continue;
-            const cb = nsMembersList.querySelector(`input[type="checkbox"][data-user-id="${uid}"]`);
-            if (cb instanceof HTMLInputElement) {
-                cb.checked = true;
+            const row = nsMembersList.querySelector(`.member-item[data-user-id="${uid}"]`);
+            if (row) {
+                row.classList.add('checked');
+                const check = row.querySelector('.m-check');
+                if (check) check.textContent = '✓';
                 imported++;
             }
         }
@@ -617,26 +736,35 @@ async function loadNewSplitView() {
 
     if (nsChannelSelect) {
         nsChannelSelect.innerHTML = '';
-        const opt = document.createElement('option');
-        opt.value = '';
-        opt.textContent = 'Cargando canales...';
-        nsChannelSelect.appendChild(opt);
+        _setChannelSelection('', '');
+    }
+    if (nsChannelPanel) {
+        nsChannelPanel.innerHTML = '<div class="picker-empty">Cargando canales…</div>';
+        nsChannelPanel.hidden = true;
+    }
+    if (nsChannelTrigger) {
+        nsChannelTrigger.setAttribute('aria-expanded', 'false');
+        nsChannelTrigger.classList.remove('is-open');
     }
 
+    if (nsVoicePanel) {
+        nsVoicePanel.innerHTML = '<div class="picker-empty">Cargando canales…</div>';
+        nsVoicePanel.hidden = true;
+    }
+    if (nsVoiceTrigger) {
+        nsVoiceTrigger.setAttribute('aria-expanded', 'false');
+        nsVoiceTrigger.classList.remove('is-open');
+    }
+    _resetVoicePickerLabel();
+    if (nsMemberSearch) nsMemberSearch.value = '';
+
     if (nsMembersList) {
-        nsMembersList.innerHTML = '<div style="padding:10px;color:var(--text2);">Cargando miembros...</div>';
+        nsMembersList.innerHTML = '<div class="split-members-loading">Cargando miembros…</div>';
     }
     if (nsPreviewMeta) nsPreviewMeta.textContent = '-';
     if (nsPreviewList) nsPreviewList.innerHTML = '';
 
-    if (nsVoiceSelect) {
-        nsVoiceSelect.innerHTML = '<option value="">Auto-seleccionar miembros conectados…</option>';
-        const loadingOpt = document.createElement('option');
-        loadingOpt.value = '';
-        loadingOpt.textContent = 'Cargando canales de voz...';
-        loadingOpt.disabled = true;
-        nsVoiceSelect.appendChild(loadingOpt);
-    }
+    if (nsVoiceSelect) nsVoiceSelect.innerHTML = '';
 
     try {
         const [chRes, mRes, vRes] = await Promise.all([
@@ -652,10 +780,6 @@ async function loadNewSplitView() {
             const chans = Array.isArray(chData.channels) ? chData.channels : [];
             if (nsChannelSelect) {
                 nsChannelSelect.innerHTML = '';
-                const empty = document.createElement('option');
-                empty.value = '';
-                empty.textContent = 'Selecciona un canal';
-                nsChannelSelect.appendChild(empty);
                 for (const c of chans) {
                     const o = document.createElement('option');
                     o.value = String(c.id || '');
@@ -663,24 +787,35 @@ async function loadNewSplitView() {
                     nsChannelSelect.appendChild(o);
                 }
             }
+            _renderPickerOptions(nsChannelPanel, chans.map(c => ({
+                id: c.id,
+                name: String(c.name || c.id || ''),
+            })), { placeholder: 'Sin canales de texto' });
+            if (nsChannelLabel) nsChannelLabel.classList.add('is-placeholder');
         }
 
-        if (vRes.ok && nsVoiceSelect) {
+        if (vRes.ok) {
             const vData = await vRes.json().catch(() => ({}));
             const voiceChans = Array.isArray(vData.channels) ? vData.channels : [];
-            nsVoiceSelect.innerHTML = '<option value="">Auto-seleccionar miembros conectados…</option>';
-            for (const ch of voiceChans) {
-                const o = document.createElement('option');
-                o.value = String(ch.id || '');
-                o.textContent = `🔊 ${String(ch.name || ch.id || '')}`;
-                nsVoiceSelect.appendChild(o);
+            if (nsVoiceSelect) {
+                nsVoiceSelect.innerHTML = '';
+                for (const ch of voiceChans) {
+                    const o = document.createElement('option');
+                    o.value = String(ch.id || '');
+                    o.textContent = String(ch.name || ch.id || '');
+                    nsVoiceSelect.appendChild(o);
+                }
             }
-        } else if (nsVoiceSelect) {
-            nsVoiceSelect.innerHTML = '<option value="">Sin canales de voz</option>';
+            _renderPickerOptions(nsVoicePanel, voiceChans.map(ch => ({
+                id: ch.id,
+                name: String(ch.name || ch.id || ''),
+            })), { placeholder: 'Sin canales de voz', prefix: '🔊' });
+        } else {
+            _renderPickerOptions(nsVoicePanel, [], { placeholder: 'Sin canales de voz' });
         }
 
         if (!mRes.ok) {
-            if (nsMembersList) nsMembersList.innerHTML = '<div style="padding:10px;color:var(--text2);">No se pudieron cargar miembros.</div>';
+            if (nsMembersList) nsMembersList.innerHTML = '<div class="split-members-loading">No se pudieron cargar miembros.</div>';
         } else {
             const mData = await mRes.json().catch(() => ({}));
             const members = Array.isArray(mData.members) ? mData.members : [];
@@ -689,30 +824,33 @@ async function loadNewSplitView() {
             if (nsMembersList) {
                 nsMembersList.innerHTML = '';
 
-                const guildRow = document.createElement('label');
-                guildRow.className = 'split-member split-member-guild';
+                const guildRow = document.createElement('div');
+                guildRow.className = 'member-item guild-row';
+                guildRow.setAttribute('data-user-id', '0');
+                guildRow.setAttribute('data-user-name', 'Guild');
                 guildRow.innerHTML = `
-                    <input type="checkbox" data-user-id="0" data-user-name="Guild" />
-                    <div class="split-member-name">Guild (opcional)</div>
+                    <div class="m-check"></div>
+                    <div class="m-ava guild-ava">⚔️</div>
+                    <div class="m-name">Guild <span class="m-sub">(opcional)</span></div>
                 `;
-                const guildCb = guildRow.querySelector('input[type="checkbox"]');
-                if (guildCb) guildCb.addEventListener('change', _renderNewSplitPreview);
+                guildRow.addEventListener('click', () => _toggleMemberItem(guildRow));
                 nsMembersList.appendChild(guildRow);
 
                 for (const m of members) {
                     const uid = String(m.id || '').trim();
                     if (!uid) continue;
                     const name = String(m.name || uid).trim();
-                    const row = document.createElement('label');
-                    row.className = 'split-member';
+                    const initial = name ? name[0].toUpperCase() : '?';
+                    const row = document.createElement('div');
+                    row.className = 'member-item';
+                    row.setAttribute('data-user-id', uid);
+                    row.setAttribute('data-user-name', name);
                     row.innerHTML = `
-                        <input type="checkbox" data-user-id="${escapeHtml(uid)}" data-user-name="${escapeHtml(name)}" />
-                        <div class="split-member-name">${escapeHtml(name)}</div>
+                        <div class="m-check"></div>
+                        <div class="m-ava">${escapeHtml(initial)}</div>
+                        <div class="m-name">${escapeHtml(name)}</div>
                     `;
-                    const cb = row.querySelector('input[type="checkbox"]');
-                    if (cb) {
-                        cb.addEventListener('change', _renderNewSplitPreview);
-                    }
+                    row.addEventListener('click', () => _toggleMemberItem(row));
                     nsMembersList.appendChild(row);
                 }
             }
@@ -833,15 +971,23 @@ if (nsTotal) nsTotal.addEventListener('input', _renderNewSplitPreview);
 if (nsTotal) nsTotal.addEventListener('change', _renderNewSplitPreview);
 if (nsName) nsName.addEventListener('input', () => _setNsHint(''));
 if (nsChannelSelect) nsChannelSelect.addEventListener('change', () => _setNsHint(''));
-if (nsVoiceSelect) {
-    nsVoiceSelect.addEventListener('change', async () => {
-        const channelId = String(nsVoiceSelect.value || '').trim();
-        if (!channelId) return;
-        const channelName = nsVoiceSelect.selectedOptions[0]?.textContent?.replace(/^🔊\s*/, '') || '';
-        await nsImportFromVoiceChannel(channelId, channelName);
-        nsVoiceSelect.value = '';
-    });
-}
+_bindPicker(nsChannelTrigger, nsChannelPanel, (value, label) => {
+    _setChannelSelection(value, label);
+});
+_bindPicker(nsVoiceTrigger, nsVoicePanel, async (value, label) => {
+    if (!value) return;
+    if (nsVoiceSelect) nsVoiceSelect.value = value;
+    if (nsVoiceLabel) {
+        nsVoiceLabel.textContent = label;
+        nsVoiceLabel.classList.remove('is-placeholder');
+    }
+    await nsImportFromVoiceChannel(value, label);
+    _resetVoicePickerLabel();
+});
+if (nsMemberSearch) nsMemberSearch.addEventListener('input', _filterNewSplitMembers);
+if (nsSelectAllBtn) nsSelectAllBtn.addEventListener('click', () => _setAllMembersChecked(true));
+if (nsClearAllBtn) nsClearAllBtn.addEventListener('click', () => _setAllMembersChecked(false));
+document.addEventListener('click', () => _closeAllPickers(null));
 if (nsCreateBtn) nsCreateBtn.addEventListener('click', createNewSplit);
 
 for (const n of navItems) {
