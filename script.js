@@ -7,6 +7,12 @@ const userAvatar = document.getElementById('userAvatar');
 const userName = document.getElementById('userName');
 const serverPill = document.getElementById('serverPill');
 const membersTableBody = document.getElementById('membersTableBody');
+const membersVoiceBar = document.getElementById('membersVoiceBar');
+const membersVoiceTrigger = document.getElementById('membersVoiceTrigger');
+const membersVoicePanel = document.getElementById('membersVoicePanel');
+const membersVoiceLabel = document.getElementById('membersVoiceLabel');
+const membersVoiceApplyBtn = document.getElementById('membersVoiceApplyBtn');
+const membersVoiceHint = document.getElementById('membersVoiceHint');
 const modOpenBtn = document.getElementById('modOpenBtn');
 const modModal = document.getElementById('modModal');
 const modCloseBtn = document.getElementById('modCloseBtn');
@@ -111,7 +117,21 @@ function getDiscordAvatarUrl(user) {
 }
 
 const MEMBER_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+const MEMBER_DAY_LABELS = { mon: 'Lunes', tue: 'Martes', wed: 'Miércoles', thu: 'Jueves', fri: 'Viernes' };
 let membersRosterWeek = '';
+let canManageMembersRoster = false;
+let selectedMembersVoiceChannelId = '';
+let selectedMembersVoiceChannelName = '';
+
+function getTodayMemberDay() {
+    const map = { 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri' };
+    return map[new Date().getDay()] || null;
+}
+
+function getTodayMemberDayLabel() {
+    const day = getTodayMemberDay();
+    return day ? (MEMBER_DAY_LABELS[day] || day) : null;
+}
 
 function getIsoWeekKey(date = new Date()) {
     const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -149,8 +169,25 @@ async function saveMemberRosterUpdate(payload) {
 function renderMembersTable(members, weekKey, canManage) {
     if (!membersTableBody) return;
     try {
+        canManageMembersRoster = !!canManage;
         membersRosterWeek = weekKey;
         membersTableBody.innerHTML = '';
+
+        if (membersVoiceBar) {
+            membersVoiceBar.hidden = !canManage;
+        }
+        if (canManage) {
+            loadMembersVoiceChannels();
+            updateMembersVoiceHint();
+        }
+
+        const todayDay = getTodayMemberDay();
+        const dayClassMap = { mon: 'col-day-mon', tue: 'col-day-tue', wed: 'col-day-wed', thu: 'col-day-thu', fri: 'col-day-fri' };
+        document.querySelectorAll('#membersTable thead .col-day').forEach((th) => th.classList.remove('col-day-today'));
+        if (todayDay && dayClassMap[todayDay]) {
+            const thToday = document.querySelector(`#membersTable thead .${dayClassMap[todayDay]}`);
+            if (thToday) thToday.classList.add('col-day-today');
+        }
 
         if (!members.length) {
             membersTableBody.innerHTML = '<tr><td colspan="9" class="members-empty">Sin miembros para mostrar.</td></tr>';
@@ -172,7 +209,11 @@ function renderMembersTable(members, weekKey, canManage) {
         for (const day of MEMBER_DAYS) {
             const mark = att[day] || '';
             const title = canManage ? 'Clic: ✓ / ✗ / vacío' : 'Solo mods pueden editar';
-            const cls = canManage ? 'att-cell' : 'att-cell att-cell-readonly';
+            const isToday = day === todayDay;
+            const cls = [
+                canManage ? 'att-cell' : 'att-cell att-cell-readonly',
+                isToday ? 'att-cell-today' : '',
+            ].filter(Boolean).join(' ');
             dayCells += `<td class="${cls}" data-day="${day}" data-mark="${mark}" title="${title}">${renderAttendanceCell(mark)}</td>`;
         }
 
@@ -246,8 +287,98 @@ function renderMembersTable(members, weekKey, canManage) {
     }
 }
 
+function updateMembersVoiceHint(extra) {
+    if (!membersVoiceHint) return;
+    const dayLabel = getTodayMemberDayLabel();
+    if (!dayLabel) {
+        membersVoiceHint.textContent = 'Hoy no es día laboral (Lun–Vie). La asistencia automática no aplica sábado/domingo.';
+        if (membersVoiceApplyBtn) membersVoiceApplyBtn.disabled = true;
+        return;
+    }
+    if (membersVoiceApplyBtn) membersVoiceApplyBtn.disabled = false;
+    const base = `Día actual: ${dayLabel} · En canal = ✓ · Fuera = ✗`;
+    membersVoiceHint.textContent = extra ? `${base} · ${extra}` : base;
+}
+
+async function loadMembersVoiceChannels() {
+    if (!membersVoicePanel || !selectedGuildId || !canManageMembersRoster) return;
+    membersVoicePanel.innerHTML = '<div class="picker-empty">Cargando canales…</div>';
+    selectedMembersVoiceChannelId = '';
+    selectedMembersVoiceChannelName = '';
+    if (membersVoiceLabel) {
+        membersVoiceLabel.textContent = 'Selecciona un canal de voz…';
+        membersVoiceLabel.classList.add('is-placeholder');
+    }
+    try {
+        const qs = new URLSearchParams({ guild_id: selectedGuildId, filter: 'voice' });
+        const res = await apiFetch(`/api/members?${qs.toString()}`, { method: 'GET' });
+        const data = await res.json().catch(() => ({}));
+        const channels = res.ok && Array.isArray(data.channels) ? data.channels : [];
+        _renderPickerOptions(membersVoicePanel, channels.map((ch) => ({
+            id: ch.id,
+            name: String(ch.name || ch.id || ''),
+        })), { placeholder: 'Sin canales de voz', prefix: '🔊' });
+    } catch (e) {
+        console.error(e);
+        if (membersVoicePanel) {
+            membersVoicePanel.innerHTML = '<div class="picker-empty">Error cargando canales</div>';
+        }
+    }
+}
+
+async function applyMembersVoiceAttendance() {
+    if (!canManageMembersRoster || !selectedGuildId) return;
+    const day = getTodayMemberDay();
+    const dayLabel = getTodayMemberDayLabel();
+    if (!day || !dayLabel) {
+        alert('La asistencia automática solo aplica de lunes a viernes.');
+        return;
+    }
+    if (!selectedMembersVoiceChannelId) {
+        alert('Selecciona un canal de voz primero.');
+        return;
+    }
+    const ok = confirm(
+        `¿Aplicar asistencia de ${dayLabel} según el canal "${selectedMembersVoiceChannelName}"?\n\n` +
+        '✓ Presentes: miembros conectados en ese canal\n' +
+        '✗ Ausentes: el resto del roster'
+    );
+    if (!ok) return;
+
+    if (membersVoiceApplyBtn) membersVoiceApplyBtn.disabled = true;
+    updateMembersVoiceHint('Aplicando…');
+    try {
+        const res = await apiFetch('/api/members/roster/apply-voice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                guild_id: selectedGuildId,
+                week: membersRosterWeek || getIsoWeekKey(),
+                voice_channel_id: selectedMembersVoiceChannelId,
+                day,
+            }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+            throw new Error(data.error || 'No se pudo aplicar la asistencia');
+        }
+        const present = Number(data.present_count || 0);
+        const absent = Number(data.absent_count || 0);
+        showNotification(`Asistencia de ${dayLabel}: ${present} presentes, ${absent} ausentes.`, 'success');
+        updateMembersVoiceHint(`${present} ✓ · ${absent} ✗`);
+        await loadMembersView();
+    } catch (e) {
+        console.error(e);
+        alert(e.message || 'Error al aplicar asistencia');
+        updateMembersVoiceHint();
+    } finally {
+        if (membersVoiceApplyBtn) membersVoiceApplyBtn.disabled = !getTodayMemberDay();
+    }
+}
+
 async function loadMembersView() {
     if (!membersTableBody) return;
+    if (membersVoiceBar) membersVoiceBar.hidden = true;
     if (!selectedGuildId) {
         membersTableBody.innerHTML = '<tr><td colspan="9" class="members-empty">Inicia sesión para ver miembros.</td></tr>';
         return;
@@ -1020,6 +1151,15 @@ if (nsMemberSearch) nsMemberSearch.addEventListener('input', _filterNewSplitMemb
 if (nsSelectAllBtn) nsSelectAllBtn.addEventListener('click', () => _setAllMembersChecked(true));
 if (nsClearAllBtn) nsClearAllBtn.addEventListener('click', () => _setAllMembersChecked(false));
 document.addEventListener('click', () => _closeAllPickers(null));
+_bindPicker(membersVoiceTrigger, membersVoicePanel, (value, label) => {
+    selectedMembersVoiceChannelId = value;
+    selectedMembersVoiceChannelName = label;
+    if (membersVoiceLabel) {
+        membersVoiceLabel.textContent = label;
+        membersVoiceLabel.classList.remove('is-placeholder');
+    }
+});
+if (membersVoiceApplyBtn) membersVoiceApplyBtn.addEventListener('click', applyMembersVoiceAttendance);
 if (nsCreateBtn) nsCreateBtn.addEventListener('click', createNewSplit);
 
 for (const n of navItems) {

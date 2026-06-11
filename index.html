@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RoyalVoid Loot split</title>
-    <link rel="stylesheet" href="styles.css?v=12">
+    <link rel="stylesheet" href="styles.css?v=14">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Exo+2:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -188,6 +188,23 @@
             </div>
             <div class="panel">
                 <div class="panel-hdr"><div class="panel-hdr-title">👥 Miembros</div></div>
+                <div class="members-voice-bar" id="membersVoiceBar" hidden>
+                    <div class="members-voice-bar-inner">
+                        <div class="members-voice-field">
+                            <label for="membersVoiceTrigger">Asistencia desde canal de voz</label>
+                            <div class="picker picker-voice" id="membersVoicePicker">
+                                <button type="button" class="picker-trigger" id="membersVoiceTrigger" aria-haspopup="listbox" aria-expanded="false">
+                                    <span class="picker-prefix">🔊</span>
+                                    <span class="picker-value is-placeholder" id="membersVoiceLabel">Selecciona un canal de voz…</span>
+                                    <span class="picker-arrow" aria-hidden="true">▾</span>
+                                </button>
+                                <div class="picker-panel" id="membersVoicePanel" role="listbox" hidden></div>
+                            </div>
+                        </div>
+                        <button type="button" class="members-voice-apply" id="membersVoiceApplyBtn">Aplicar asistencia de hoy</button>
+                    </div>
+                    <div class="members-voice-hint" id="membersVoiceHint">En canal = ✓ · Fuera = ✗ · Solo Lun–Vie</div>
+                </div>
                 <div class="members-table-wrap">
                     <table class="members-table" id="membersTable">
                         <thead>
@@ -300,6 +317,6 @@
         </div>
     </div>
 
-    <script src="script.js?v=13"></script>
+    <script src="script.js?v=14"></script>
 </body>
 </html>

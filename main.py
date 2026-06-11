@@ -1424,6 +1424,107 @@ async def api_members_roster_handler(request: web.Request) -> web.StreamResponse
 
     return await _json_error(405, "Method not allowed")
 
+async def api_members_roster_apply_voice_handler(request: web.Request) -> web.StreamResponse:
+    sess = _require_session(request)
+    if not sess:
+        return await _json_error(401, "Not logged in")
+    if request.method != "POST":
+        return await _json_error(405, "Method not allowed")
+
+    try:
+        body = await request.json()
+    except Exception:
+        return await _json_error(400, "Invalid JSON")
+    if not isinstance(body, dict):
+        return await _json_error(400, "Invalid body")
+
+    guild_id = str(body.get("guild_id", "")).strip()
+    week = str(body.get("week", "")).strip()
+    voice_channel_id = str(body.get("voice_channel_id", "")).strip()
+    day = str(body.get("day", "")).strip().lower()
+
+    if not guild_id.isdigit():
+        return await _json_error(400, "Invalid guild_id")
+    if not week:
+        return await _json_error(400, "Missing week")
+    if not voice_channel_id.isdigit():
+        return await _json_error(400, "Invalid voice_channel_id")
+    if day not in VALID_ATT_DAYS:
+        return await _json_error(400, "Invalid day (solo Lun–Vie)")
+
+    gid = int(guild_id)
+    vch_id = int(voice_channel_id)
+
+    if not await _can_manage_guild(sess, gid):
+        return await _json_error(403, "Forbidden")
+
+    guild = bot.get_guild(gid)
+    if guild is None:
+        return await _json_error(404, "Guild not found")
+
+    voice_channel = guild.get_channel(vch_id)
+    voice_channel_name = str(getattr(voice_channel, "name", voice_channel_id))
+
+    base_members = _guild_role_members(guild)
+    if not base_members:
+        return web.json_response({
+            "success": True,
+            "day": day,
+            "week": week,
+            "voice_channel_id": str(vch_id),
+            "voice_channel_name": voice_channel_name,
+            "present_count": 0,
+            "absent_count": 0,
+        })
+
+    present_ids: set[int] = set()
+    try:
+        for m in guild.members:
+            if m is None or m.bot:
+                continue
+            if not (m.voice and m.voice.channel is not None):
+                continue
+            if int(getattr(m.voice.channel, "id", 0) or 0) != vch_id:
+                continue
+            present_ids.add(int(m.id))
+    except Exception:
+        present_ids = set()
+
+    present_count = 0
+    absent_count = 0
+    conn = _db_connect()
+    try:
+        cur = conn.cursor()
+        for m in base_members:
+            uid = int(m["id"])
+            mark = "check" if uid in present_ids else "x"
+            if mark == "check":
+                present_count += 1
+            else:
+                absent_count += 1
+            cur.execute(
+                """
+                INSERT INTO member_attendance (guild_id, user_id, week, day, mark, updated_at)
+                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(guild_id, user_id, week, day)
+                DO UPDATE SET mark = excluded.mark, updated_at = CURRENT_TIMESTAMP
+                """,
+                (gid, uid, week, day, mark),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+    return web.json_response({
+        "success": True,
+        "day": day,
+        "week": week,
+        "voice_channel_id": str(vch_id),
+        "voice_channel_name": voice_channel_name,
+        "present_count": present_count,
+        "absent_count": absent_count,
+    })
+
 async def api_channels_handler(request: web.Request) -> web.StreamResponse:
     sess = _require_session(request)
     if not sess:
@@ -3402,6 +3503,7 @@ async def start_webhook_server() -> tuple[web.AppRunner, web.TCPSite]:
     app.router.add_get("/api/members", api_members_handler)
     app.router.add_route("GET", "/api/members/roster", api_members_roster_handler)
     app.router.add_route("POST", "/api/members/roster", api_members_roster_handler)
+    app.router.add_post("/api/members/roster/apply-voice", api_members_roster_apply_voice_handler)
     app.router.add_get("/api/channels", api_channels_handler)
     app.router.add_route("GET", "/api/activities", api_activities_handler)
     app.router.add_route("POST", "/api/activities", api_activities_handler)
